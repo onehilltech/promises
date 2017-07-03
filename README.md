@@ -81,7 +81,7 @@ Promise.resolve (5)
        });
 ```
 
-Not all handlers will return a `Promise` object. If you are in this situation, you can use
+Not all handlers will return a `Promise` object. If you are in this situation, then you can use
 the `ResolveNoReturn` and `RejectNoReturn` helper classes, or `resolved` and `rejected` helper
 methods.
 
