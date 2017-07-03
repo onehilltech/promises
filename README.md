@@ -122,6 +122,8 @@ methods for running a handler on the UI thread.
 ```java
 import static com.onehilltech.promises.Promise.resolved;
 import static com.onehilltech.promises.Promise.rejected;
+import static com.onehilltech.promises.RejectedOnUIThread.rejectOnUiThread;
+import static com.onehilltech.promises.ResolvedOnUIThread.resolveOnUiThread;
 
 // ...
 
@@ -129,7 +131,7 @@ Promise.resolve ("Hello, World!")
        .then (resolveOnUiThread (resolved (str -> {
         this.label.setText (str);
        })))
-       ._catch (rejected (reason -> reason.printStackTrace ()));
+       ._catch (rejectOnUiThread (rejected (reason -> reason.printStackTrace ())));
 ```
 
 
