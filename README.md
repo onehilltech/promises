@@ -7,7 +7,7 @@ promises
 
 Promise library for JVM and Android
 
-* Implements the [Promise/A+](https://promisesaplus.com/) specification from JavaScript
+* Implements the [Promises/A+](https://promisesaplus.com/) specification from JavaScript
 * Built using Java 1.7, but designed for Java 1.8
 * Supports Java Lambda expressions
 * Android module allows resolve/reject callbacks to run on UI thread
