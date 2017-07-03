@@ -100,7 +100,13 @@ Promise.resolve (5)
 
 ### Promise.all
 
+The library implements `Promise.all`, which is resolved if all promises are resolved 
+is rejected if any of the promises is rejected.
+
 ### Promise.race
+
+The library implements `Promise.race`, which is settled with any of the promises is
+either resolved or rejected.
 
 ## Android Support
 
