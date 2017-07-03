@@ -49,7 +49,9 @@ Promise.resolve (5);
 Promise.reject (new IllegalStateException ("This is a rejected promise"));
 ```
 
-You can also create a promise that is settled in the background.
+You can also create a promise that is settled in the background. This is good when you need to 
+perform some workload in the background, and notify the caller (or client) when the workload
+is complete (or failed).
 
 ```java
 Promise <Foo> p = new Promise < > (settlement -> {
