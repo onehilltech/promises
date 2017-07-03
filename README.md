@@ -134,7 +134,7 @@ Promise.resolve (5)
        })
        ._catch (rejected (reason -> { }))
        .then (this::doSomethingElse)
-       .catch (Promise.ignoreReason);
+       ._catch (Promise.ignoreReason);
 ```
 
 ### Promise.all
