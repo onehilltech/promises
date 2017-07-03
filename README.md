@@ -47,6 +47,19 @@ Promise.resolve (5);
 Promise.reject (new IllegalStateException ("This is a rejected promise"));
 ```
 
+You can also create a promise that is settled in the background.
+
+```java
+Promise <Foo> p = new Promise < > (settlement -> {
+  // settlement.resolve (foo);
+  // settlement.reject (ex);
+}); 
+```
+
+In this case, you must either invoke `settlement.resolve` with the resolved value, or
+`settlement.reject` with an exception. Any uncaught exceptions will automatically reject
+the promise with the uncaught exception.
+
 All promises are executed (or settled) when they are first created. To process
 a promise's settlement, use either `then` or `_catch`.
 
