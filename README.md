@@ -64,5 +64,39 @@ Promise.reject (new IllegalStateException ("This is a rejected promise"))
        });
 ```
 
+You may notice that the handlers return `null` in the example above. This is because the
+handler has the option of returning a `Promise` that to used to resolve the value for the
+next handler in the chain. If the handler does not return a `Promise`, then `null` is passed
+to the next handler.
+
+```java
+Promise.resolve (5)
+       .then (n -> {
+         System.out.println ("Resolved value: " + n);
+         return Promise.resolve (10);
+       })
+       .then (n -> {
+         System.out.println ("Resolved value: " + n);
+         return null;
+       });
+```
+
+Not all handlers will return a `Promise` object. If you are in this situation, you can use
+the `ResolveNoReturn` and `RejectNoReturn` helper classes, or `resolved` and `rejected` helper
+methods.
+
+```java
+import static com.onehilltech.promises.Promise.resolved;
+import static com.onehilltech.promises.Promise.rejected;
+
+// ...
+
+Promise.resolve (5)
+       .then (resolved (n -> {
+         System.out.println ("Resolved value: " + n);
+       }))
+       ._catch (rejected (reason -> reason.printStackTrace ()));
+```
+
 
 Happy Coding!
