@@ -115,6 +115,28 @@ Promise.resolve (5)
        ._catch (rejected (reason -> reason.printStackTrace ()));
 ```
 
+### Chaining Promises
+
+Promises can be chained to create a series of background workloads to be completed in
+step order. Just use `then` to chain a series of background workloads, and `_catch` to
+handle any rejection from the preceding promises.
+
+
+```java
+Promise.resolve (5)
+       .then (n -> {
+         System.out.println ("Resolved value: " + n);
+         return Promise.resolve (10);
+       })
+       .then (n -> {
+         System.out.println ("Resolved value: " + n);
+         return null;
+       })
+       ._catch (rejected (reason -> { }))
+       .then (this::doSomethingElse)
+       .catch (Promise.ignoreReason);
+```
+
 ### Promise.all
 
 The library implements `Promise.all`, which is resolved if all promises are resolved 
