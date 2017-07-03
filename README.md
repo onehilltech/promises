@@ -98,5 +98,8 @@ Promise.resolve (5)
        ._catch (rejected (reason -> reason.printStackTrace ()));
 ```
 
+### Promise.all
+
+### Promise.race
 
 Happy Coding!
