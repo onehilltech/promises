@@ -18,6 +18,7 @@ package com.onehilltech.promises;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -51,27 +52,33 @@ public class Promise <T>
   }
 
   /**
-   * @interface OnResolved
-   *
-   * Function for resolving a promise. The promise implementation has the option
+   * Interface for resolving a promise. The promise implementation has the option
    * of chaining another promise that will be used to get the value for resolve handlers
    * later in the chain.
    *
    * @param <T>
    */
-  @FunctionalInterface
   public interface OnResolved <T, U>
   {
     Promise <U> onResolved (T value);
   }
 
-  @FunctionalInterface
+  /**
+   * Interface for rejecting a promise. The promise implementation has the option
+   * of chaining another promise that will be used to get the value for resolve handlers
+   * later in the chain.
+   */
   public interface OnRejected
   {
     Promise onRejected (Throwable reason);
   }
 
-  @FunctionalInterface
+  /**
+   * Helper interface for resolving a promise, but does not return a promise to be used in
+   * chain
+   *
+   * @param <T>
+   */
   public interface ResolveNoReturn <T>
   {
     void resolveNoReturn (T value);
@@ -99,14 +106,30 @@ public class Promise <T>
     }
   }
 
+  /**
+   * Factory method that creates an OnRejected handler that does not return a Promise
+   * value to be used in the chain.
+   *
+   * @param rejectNoReturn        RejectNoReturn instance
+   * @return
+   */
   public static OnRejected rejected (RejectNoReturn rejectNoReturn)
   {
     return new OnRejectedNoReturn (rejectNoReturn);
   }
 
-  public static final OnRejected ignoreReason = rejected (reason -> {});
+  /**
+   * Helper OnRejected handler for ignoring the reason a Promise is rejected.
+   */
+  public static final OnRejected ignoreReason = rejected (new RejectNoReturn ()
+  {
+    @Override
+    public void rejectNoReturn (Throwable reason)
+    {
 
-  @FunctionalInterface
+    }
+  });
+
   public interface RejectNoReturn
   {
     void rejectNoReturn (Throwable reason);
@@ -251,9 +274,9 @@ public class Promise <T>
    * @param onRejected
    */
   @SuppressWarnings ("unchecked")
-  public <U> Promise <U> then (OnResolved <T, U> onResolved, OnRejected onRejected)
+  public <U> Promise <U> then (final OnResolved <T, U> onResolved, final OnRejected onRejected)
   {
-    ContinuationPromise continuation = new ContinuationPromise<> ();
+    final ContinuationPromise continuation = new ContinuationPromise<> ();
 
     if (this.status_ == Status.Resolved)
     {
@@ -261,22 +284,27 @@ public class Promise <T>
       // then we need to invoke it and determine how we are to proceed. Otherwise,
       // we need to continue down the chain with a new start (i.e., a null value).
 
-      this.executor_.execute (() -> {
-        if (onResolved != null)
+      this.executor_.execute (new Runnable ()
+      {
+        @Override
+        public void run ()
         {
-          try
+          if (onResolved != null)
           {
-            Promise promise = onResolved.onResolved (this.value_);
-            continuation.continueWith (promise);
+            try
+            {
+              Promise promise = onResolved.onResolved (value_);
+              continuation.continueWith (promise);
+            }
+            catch (Exception e)
+            {
+              continuation.continueWith (e);
+            }
           }
-          catch (Exception e)
+          else
           {
-            continuation.continueWith (e);
+            continuation.continueWithNull ();
           }
-        }
-        else
-        {
-          continuation.continueWithNull ();
         }
       });
     }
@@ -285,22 +313,27 @@ public class Promise <T>
       // We are handling the rejection as this level. Either we are going to handle
       // the rejection as this level via a onRejected handler, or we are going to
       // pass the rejection to the next level.
-      this.executor_.execute (() -> {
-        if (onRejected != null)
+      this.executor_.execute (new Runnable ()
+      {
+        @Override
+        public void run ()
         {
-          try
+          if (onRejected != null)
           {
-            Promise promise = onRejected.onRejected (this.rejection_);
-            continuation.continueWith (promise);
+            try
+            {
+              Promise promise = onRejected.onRejected (rejection_);
+              continuation.continueWith (promise);
+            }
+            catch (Exception e)
+            {
+              continuation.continueWith (e);
+            }
           }
-          catch (Exception e)
+          else
           {
-            continuation.continueWith (e);
+            continuation.continueWith (rejection_);
           }
-        }
-        else
-        {
-          continuation.continueWith (this.rejection_);
         }
       });
     }
@@ -319,38 +352,43 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   private void settlePromise ()
   {
-    this.executor_.execute (() -> {
-      // Execute the promise. This method must call either resolve or reject
-      // before this method return. Failure to do so means the promise was not
-      // completed, and in a bad state.
-      try
+    this.executor_.execute (new Runnable ()
+    {
+      @Override
+      public void run ()
       {
-        this.impl_.execute (new Settlement<T> ()
+        // Execute the promise. This method must call either resolve or reject
+        // before this method return. Failure to do so means the promise was not
+        // completed, and in a bad state.
+        try
         {
-          @Override
-          public void resolve (T value)
+          impl_.execute (new Settlement<T> ()
           {
-            // Check that the promise is still pending.
-            if (status_ != Status.Pending)
-              throw new IllegalStateException ("Promise must be pending to resolve");
+            @Override
+            public void resolve (T value)
+            {
+              // Check that the promise is still pending.
+              if (status_ != Status.Pending)
+                throw new IllegalStateException ("Promise must be pending to resolve");
 
-            onResolve (value);
-          }
+              onResolve (value);
+            }
 
-          @Override
-          public void reject (Throwable reason)
-          {
-            // Check that the promise is still pending.
-            if (status_ != Status.Pending)
-              throw new IllegalStateException ("Promise must be pending to reject");
+            @Override
+            public void reject (Throwable reason)
+            {
+              // Check that the promise is still pending.
+              if (status_ != Status.Pending)
+                throw new IllegalStateException ("Promise must be pending to reject");
 
-            onReject (reason);
-          }
-        });
-      }
-      catch (Exception e)
-      {
-        this.onReject (e);
+              onReject (reason);
+            }
+          });
+        }
+        catch (Exception e)
+        {
+          onReject (e);
+        }
       }
     });
   }
@@ -365,24 +403,29 @@ public class Promise <T>
     if (this.pendingEntries_.isEmpty ())
       return;
 
-    for (PendingEntry <T> entry: this.pendingEntries_)
+    for (final PendingEntry <T> entry: this.pendingEntries_)
     {
-      this.executor_.execute (() -> {
-        try
+      this.executor_.execute (new Runnable ()
+      {
+        @Override
+        public void run ()
         {
-          if (entry.onResolved != null)
+          try
           {
-            Promise promise = entry.onResolved.onResolved (this.value_);
-            entry.cont.continueWith (promise);
+            if (entry.onResolved != null)
+            {
+              Promise promise = entry.onResolved.onResolved (value_);
+              entry.cont.continueWith (promise);
+            }
+            else
+            {
+              entry.cont.continueWithNull ();
+            }
           }
-          else
+          catch (Exception e)
           {
-            entry.cont.continueWithNull ();
+            entry.cont.continueWith (e);
           }
-        }
-        catch (Exception e)
-        {
-          entry.cont.continueWith (e);
         }
       });
     }
@@ -405,24 +448,29 @@ public class Promise <T>
     if (this.pendingEntries_.isEmpty ())
       return;
 
-    for (PendingEntry <T> entry: this.pendingEntries_)
+    for (final PendingEntry <T> entry: this.pendingEntries_)
     {
-      this.executor_.execute (() -> {
-        try
+      this.executor_.execute (new Runnable ()
+      {
+        @Override
+        public void run ()
         {
-          if (entry.onRejected != null)
+          try
           {
-            Promise promise = entry.onRejected.onRejected (this.rejection_);
-            entry.cont.continueWith (promise);
+            if (entry.onRejected != null)
+            {
+              Promise promise = entry.onRejected.onRejected (rejection_);
+              entry.cont.continueWith (promise);
+            }
+            else
+            {
+              entry.cont.continueWith (rejection_);
+            }
           }
-          else
+          catch (Exception e)
           {
-            entry.cont.continueWith (this.rejection_);
+            entry.cont.continueWith (e);
           }
-        }
-        catch (Exception e)
-        {
-          entry.cont.continueWith (e);
         }
       });
     }
@@ -479,51 +527,61 @@ public class Promise <T>
    * @param promises
    * @return
    */
-  public static Promise <List <Object>> all (List <Promise <?>> promises)
+  public static Promise <List <Object>> all (final List <Promise <?>> promises)
   {
     if (promises.isEmpty ())
-      return Promise.resolve (new ArrayList<> ());
+      return Promise.resolve (Collections.emptyList ());
 
-    return new Promise<> ((settlement) -> {
-      ArrayList <Object> results = new ArrayList<> (promises.size ());
-      Iterator<Promise<?>> iterator = promises.iterator ();
-
-      // The first promise in the collection that is rejected causes all promises
-      // to be rejected.
-      final OnRejected onRejected = (reason) -> {
-        settlement.reject (reason);
-        return null;
-      };
-
-      final OnResolved onResolved = new OnResolved ()
+    return new Promise<> (new PromiseExecutor<List<Object>> ()
+    {
+      @Override
+      public void execute (final Settlement<List<Object>> settlement)
       {
-        @Override
-        public Promise onResolved (Object value)
+        final ArrayList <Object> results = new ArrayList<> (promises.size ());
+        final Iterator<Promise<?>> iterator = promises.iterator ();
+
+        // The first promise in the collection that is rejected causes all promises
+        // to be rejected.
+        final OnRejected onRejected = new OnRejected ()
         {
-          // Add the resolved value to the result set.
-          results.add (value);
-
-          if (iterator.hasNext ())
+          @Override
+          public Promise onRejected (Throwable reason)
           {
-            // We have more promises to resolve. So, let's move to the next one and
-            // attempt to resolve it.
-            Promise<?> promise = iterator.next ();
-            promise.then (this, onRejected);
+            settlement.reject (reason);
+            return null;
           }
-          else
+        };
+
+        final OnResolved onResolved = new OnResolved ()
+        {
+          @Override
+          public Promise onResolved (Object value)
           {
-            // We have fulfilled all the promises. We can return control to the
-            // client so it can continue.
-            settlement.resolve (results);
+            // Add the resolved value to the result set.
+            results.add (value);
+
+            if (iterator.hasNext ())
+            {
+              // We have more promises to resolve. So, let's move to the next one and
+              // attempt to resolve it.
+              Promise<?> promise = iterator.next ();
+              promise.then (this, onRejected);
+            }
+            else
+            {
+              // We have fulfilled all the promises. We can return control to the
+              // client so it can continue.
+              settlement.resolve (results);
+            }
+
+            return null;
           }
+        };
 
-          return null;
-        }
-      };
-
-      // Start resolving the promises.
-      Promise<?> promise = iterator.next ();
-      promise.then (onResolved, onRejected);
+        // Start resolving the promises.
+        Promise<?> promise = iterator.next ();
+        promise.then (onResolved, onRejected);
+      }
     });
   }
 
@@ -550,46 +608,61 @@ public class Promise <T>
    * @param <U>
    * @return
    */
-  public static <U> Promise <U> race (List <Promise <U>> promises)
+  public static <U> Promise <U> race (final List <Promise <U>> promises)
   {
     if (promises.isEmpty ())
       return Promise.resolve (null);
 
     final Object lock = new Object ();
 
-    return new Promise<> ((settlement) -> {
-      final OnResolved <U, ?> onResolved = resolved (value -> {
-        synchronized (lock)
+    return new Promise<U> (new PromiseExecutor<U> ()
+    {
+      @Override
+      public void execute (final Settlement<U> settlement)
+      {
+        final OnResolved <U, ?> onResolved = resolved (new ResolveNoReturn<U> ()
         {
-          try
+          @Override
+          public void resolveNoReturn (U value)
           {
-            settlement.resolve (value);
+            synchronized (lock)
+            {
+              try
+              {
+                settlement.resolve (value);
+              }
+              catch (Exception e)
+              {
+                // Do nothing since we are not the first to finish
+              }
+            }
           }
-          catch (Exception e)
-          {
-            // Do nothing since we are not the first to finish
-          }
-        }
-      });
+        });
 
-      // The first promise in the collection that is rejected causes all promises
-      // to be rejected.
-      final OnRejected onRejected = rejected (reason -> {
-        synchronized (lock)
+        // The first promise in the collection that is rejected causes all promises
+        // to be rejected.
+        final OnRejected onRejected = rejected (new RejectNoReturn ()
         {
-          try
+          @Override
+          public void rejectNoReturn (Throwable reason)
           {
-            settlement.reject (reason);
+            synchronized (lock)
+            {
+              try
+              {
+                settlement.reject (reason);
+              }
+              catch (Exception e)
+              {
+                // Do nothing since we are not the first to finish
+              }
+            }
           }
-          catch (Exception e)
-          {
-            // Do nothing since we are not the first to finish
-          }
-        }
-      });
+        });
 
-      for (Promise <U> promise: promises)
-        promise.then (onResolved, onRejected);
+        for (Promise <U> promise: promises)
+          promise.then (onResolved, onRejected);
+      }
     });
   }
 }

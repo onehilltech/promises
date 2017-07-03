@@ -1,13 +1,11 @@
-// Apply the java plugin to add support for Java
 apply plugin: 'java'
 apply plugin: 'jacoco'
 apply plugin: 'maven'
 
 group = project.property('build.group')
 
-// Java 1.7 is required for Android.
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+targetCompatibility = '1.7'
+sourceCompatibility = '1.7'
 
 // In this section you declare the dependencies for your production and test code
 dependencies {

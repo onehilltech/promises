@@ -18,26 +18,44 @@ package com.onehilltech.promises;
 
 class ContinuationPromise <T> extends Promise <T>
 {
-  public ContinuationPromise ()
+  ContinuationPromise ()
   {
     super (null);
   }
 
   @SuppressWarnings ("unchecked")
-  public void continueWith (Promise <T> promise)
+  void continueWith (Promise <T> promise)
   {
     if (promise != null)
-      promise.then (resolved (this::onResolve), rejected (this::onReject));
+    {
+      promise.then (resolved (new ResolveNoReturn<T> ()
+      {
+        @Override
+        public void resolveNoReturn (T value)
+        {
+          onResolve (value);
+        }
+      }), rejected (new RejectNoReturn ()
+      {
+        @Override
+        public void rejectNoReturn (Throwable reason)
+        {
+          onReject (reason);
+        }
+      }));
+    }
     else
+    {
       this.onResolve (null);
+    }
   }
 
-  public void continueWithNull ()
+  void continueWithNull ()
   {
     this.onResolve (null);
   }
 
-  public void continueWith (Throwable t)
+  void continueWith (Throwable t)
   {
     this.onReject (t);
   }

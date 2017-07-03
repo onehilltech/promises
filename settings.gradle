@@ -19,3 +19,4 @@ include 'services:webservice'
 rootProject.name = 'promises'
 
 include ':promises-jvm'
+include ':promises-android'
