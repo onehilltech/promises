@@ -36,6 +36,11 @@ android:
     # Specify the system image to run emulator during tests
     - sys-img-$ANDROID_ABI-$ANDROID_TARGET
 
+  licenses:
+      - 'android-sdk-preview-license-.+'
+      - 'android-sdk-license-.+'
+      - 'google-gdk-license-.+'
+
 before_script:
   # Create and start emulator
   - chmod +x gradlew
