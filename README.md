@@ -102,4 +102,6 @@ Promise.resolve (5)
 
 ### Promise.race
 
+## Android Support
+
 Happy Coding!
