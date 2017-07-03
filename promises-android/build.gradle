@@ -1,0 +1,53 @@
+apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'me.tatarka.retrolambda'
+
+group   = project.property('build.group')
+version = project.property('build.version')
+
+android {
+    compileSdkVersion project.property('android.compileSdkVersion').toInteger()
+    buildToolsVersion project.property('android.buildToolsVersion')
+
+    defaultConfig {
+        minSdkVersion project.property('android.minSdkVersion')
+        targetSdkVersion project.property('android.targetSdkVersion').toInteger()
+
+        versionCode = project.property('build.versionCode').toInteger()
+        versionName = project.property('build.version')
+
+        testApplicationId project.property('android.testApplicationId')
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        debug {
+            testCoverageEnabled true
+        }
+
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+
+}
+
+dependencies {
+    compile project (':promises-jvm')
+    compile 'com.android.support:support-annotations:25.4.0'
+
+    androidTestCompile 'junit:junit:4.12'
+    androidTestCompile('com.android.support.test:testing-support-lib:0.1') {
+        exclude group: 'junit'
+    }
+}
