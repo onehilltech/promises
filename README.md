@@ -42,12 +42,16 @@ The simplest promise to create is one that is already resolved or rejected using
 `Promise.resolve` or `Promise.reject`, respectively.
 
 ```java
+// resolved promise
 Promise.resolve (5);
 
+// rejected promise
 Promise.reject (new IllegalStateException ("This is a rejected promise"));
 ```
 
-You can also create a promise that is settled in the background.
+You can also create a promise that is settled in the background. This is good when you need to 
+perform some workload in the background, and notify the caller (or client) when the workload
+is resolved or rejected.
 
 ```java
 Promise <Foo> p = new Promise < > (settlement -> {
@@ -61,7 +65,11 @@ In this case, you must either invoke `settlement.resolve` with the resolved valu
 the promise with the uncaught exception.
 
 All promises are executed (or settled) when they are first created. To process
-a promise's settlement, use either `then` or `_catch`.
+a promise's settlement, use either `then` or `_catch`. It does not matter when you
+call `then` or `_catch`. If the promise is not settled, then the appropriate
+handler will be called after the promise is settled. If the promise is settled,
+then the appropriate handler will be called as soon as possible. All handlers are 
+executed on a separate thread from the caller.
 
 ```java
 Promise.resolve (5)
@@ -110,6 +118,35 @@ Promise.resolve (5)
        }))
        ._catch (rejected (reason -> reason.printStackTrace ()));
 ```
+
+### Chaining Promises
+
+Promises can be chained to create a series of background workloads to be completed in
+step order. Just use `then` to chain a series of background workloads, and `_catch` to
+handle any rejection from the preceding promises.
+
+```java
+Promise.resolve (5)
+       .then (n -> {
+         System.out.println ("Resolved value: " + n);
+         return Promise.resolve (10);
+       })
+       .then (n -> {
+         System.out.println ("Resolved value: " + n);
+         return null;
+       })
+       ._catch (rejected (reason -> { }))
+       .then (this::doSomethingElse)
+       ._catch (Promise.ignoreReason);
+```
+
+In the example above, we must point our several things. First, execution continues
+after the first `_catch` if any of the preceding promises is rejected. If none of
+the promises is rejected, then the first `_catch` is skipped. Second, we are using
+Java method references (i.e., `this::doSomethingElse`), which improves the readability
+of the code, and reduces its verbosity. Lastly, `Promise.ignoreReason` is a special 
+handler that will catch the rejection and ignore the reason. This way, you do not have
+to write a bunch of empty handlers as in the first `_catch`.
 
 ### Promise.all
 
