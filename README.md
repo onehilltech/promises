@@ -74,12 +74,14 @@ executed on a separate thread from the caller.
 ```java
 Promise.resolve (5)
        .then (n -> {
+         // n == 5
          System.out.println ("Resolved value: " + n);
          return null;
        });
 
 Promise.reject (new IllegalStateException ("This is a rejected promise"))
        ._catch (reason -> {
+         // reason instanceof IllegalStateException
          reason.printStackTrace ();
          return null;
        });
@@ -93,10 +95,12 @@ to the next handler.
 ```java
 Promise.resolve (5)
        .then (n -> {
+         // n == 5
          System.out.println ("Resolved value: " + n);
          return Promise.resolve (10);
        })
        .then (n -> {
+         // n == 10
          System.out.println ("Resolved value: " + n);
          return null;
        });
@@ -114,6 +118,7 @@ import static com.onehilltech.promises.Promise.rejected;
 
 Promise.resolve (5)
        .then (resolved (n -> {
+         // n == 5
          System.out.println ("Resolved value: " + n);
        }))
        ._catch (rejected (reason -> reason.printStackTrace ()));
@@ -127,14 +132,14 @@ handle any rejection from the preceding promises.
 
 ```java
 Promise.resolve (5)
-       .then (n -> {
+       .then (resolved (n -> {
+         // n == 5
          System.out.println ("Resolved value: " + n);
-         return Promise.resolve (10);
-       })
-       .then (n -> {
-         System.out.println ("Resolved value: " + n);
-         return null;
-       })
+       }))
+       .then (resolved (value -> {
+         // value == null
+         System.out.println ("Resolved value: " + value);
+       }))
        ._catch (rejected (reason -> { }))
        .then (this::doSomethingElse)
        ._catch (Promise.ignoreReason);
