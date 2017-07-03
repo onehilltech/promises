@@ -65,7 +65,11 @@ In this case, you must either invoke `settlement.resolve` with the resolved valu
 the promise with the uncaught exception.
 
 All promises are executed (or settled) when they are first created. To process
-a promise's settlement, use either `then` or `_catch`.
+a promise's settlement, use either `then` or `_catch`. It does not matter when you
+call `then` or `_catch`. If the promise is not settled, then the appropriate
+handler will be called after the promise is settled. If the promise is settled,
+then the appropriate handler will be called. All handlers are executed on a 
+separate thread from the caller.
 
 ```java
 Promise.resolve (5)
