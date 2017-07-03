@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static com.onehilltech.promises.RejectedOnUIThread.rejectOnUiThread;
+import static com.onehilltech.promises.Promise.rejected;
 
 @RunWith(AndroidJUnit4.class)
 public class RejectedOnUIThreadTest
@@ -45,18 +46,21 @@ public class RejectedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (rejectOnUiThread (reason -> {
-               boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
-               Assert.assertTrue (isUiThread);
-
-               synchronized (this.lock_)
+             ._catch (rejectOnUiThread (rejected (new Promise.RejectNoReturn ()
+             {
+               @Override
+               public void rejectNoReturn (Throwable reason)
                {
-                 this.complete_ = true;
-                 this.lock_.notify ();
-               }
+                 boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
+                 Assert.assertTrue (isUiThread);
 
-               return null;
-             }));
+                 synchronized (lock_)
+                 {
+                   complete_ = true;
+                   lock_.notify ();
+                 }
+               }
+             })));
 
       this.lock_.wait (5000);
 

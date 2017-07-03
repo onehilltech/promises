@@ -45,14 +45,19 @@ public class ResolvedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.resolve (10)
-             .then (resolveOnUiThread (resolved (value -> {
-               boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
-               Assert.assertTrue (isUiThread);
-
-               synchronized (this.lock_)
+             .then (resolveOnUiThread (resolved (new Promise.ResolveNoReturn<Integer> ()
+             {
+               @Override
+               public void resolveNoReturn (Integer value)
                {
-                 this.complete_ = true;
-                 this.lock_.notify ();
+                 boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
+                 Assert.assertTrue (isUiThread);
+
+                 synchronized (lock_)
+                 {
+                   complete_ = true;
+                   lock_.notify ();
+                 }
                }
              })));
 
