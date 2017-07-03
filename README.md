@@ -1,4 +1,4 @@
-concurrent
+promises
 ==========
 
 [![](https://jitpack.io/v/onehilltech/promises.svg)](https://jitpack.io/#onehilltech/promises)
