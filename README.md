@@ -121,7 +121,6 @@ Promises can be chained to create a series of background workloads to be complet
 step order. Just use `then` to chain a series of background workloads, and `_catch` to
 handle any rejection from the preceding promises.
 
-
 ```java
 Promise.resolve (5)
        .then (n -> {
@@ -136,6 +135,14 @@ Promise.resolve (5)
        .then (this::doSomethingElse)
        ._catch (Promise.ignoreReason);
 ```
+
+In the example above, we must point our several things. First, execution continues
+after the first `_catch` if any of the preceding promises is rejected. If none of
+the promises is rejected, then the first `_catch` is skipped. Second, we are using
+Java method references (i.e., `this::doSomethingElse`), which improves the readability
+of the code, and reduces its verbosity. Lastly, `Promise.ignoreReason` is a special 
+handler that will catch the rejection and ignore the reason. This way, you do not have
+to write a bunch of empty handlers as in the first `_catch`.
 
 ### Promise.all
 
