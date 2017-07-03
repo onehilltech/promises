@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @class Promise
@@ -167,6 +168,8 @@ public class Promise <T>
   /// The rejected value for the promise.
   protected Throwable rejection_;
 
+  private final ReentrantReadWriteLock stateLock_ = new ReentrantReadWriteLock ();
+
   private static class PromiseThreadFactory implements ThreadFactory
   {
     private AtomicInteger counter_ = new AtomicInteger (0);
@@ -278,75 +281,85 @@ public class Promise <T>
   {
     final ContinuationPromise continuation = new ContinuationPromise<> ();
 
-    if (this.status_ == Status.Resolved)
+    try
     {
-      // The promise is already resolved. If the client has provided a handler,
-      // then we need to invoke it and determine how we are to proceed. Otherwise,
-      // we need to continue down the chain with a new start (i.e., a null value).
+      // Get the read lock so that t
+      this.stateLock_.readLock ().lock ();
 
-      this.executor_.execute (new Runnable ()
+      if (this.status_ == Status.Resolved)
       {
-        @Override
-        public void run ()
-        {
-          if (onResolved != null)
-          {
-            try
-            {
-              Promise promise = onResolved.onResolved (value_);
-              continuation.continueWith (promise);
-            }
-            catch (Exception e)
-            {
-              continuation.continueWith (e);
-            }
-          }
-          else
-          {
-            continuation.continueWithNull ();
-          }
-        }
-      });
-    }
-    else if (this.status_ == Status.Rejected)
-    {
-      // We are handling the rejection as this level. Either we are going to handle
-      // the rejection as this level via a onRejected handler, or we are going to
-      // pass the rejection to the next level.
-      this.executor_.execute (new Runnable ()
-      {
-        @Override
-        public void run ()
-        {
-          if (onRejected != null)
-          {
-            try
-            {
-              Promise promise = onRejected.onRejected (rejection_);
-              continuation.continueWith (promise);
-            }
-            catch (Exception e)
-            {
-              continuation.continueWith (e);
-            }
-          }
-          else
-          {
-            continuation.continueWith (rejection_);
-          }
-        }
-      });
-    }
-    else
-    {
-      // The promise is still pending. We need to add the resolved and rejected
-      // handlers to the waiting list along with the continuation promise returned
-      // from this call. This ensure the promise from the resolve/rejected handlers
-      // is passed to the correct continuation promise.
-      this.pendingEntries_.add (new PendingEntry<> (continuation, onResolved, onRejected));
-    }
+        // The promise is already resolved. If the client has provided a handler,
+        // then we need to invoke it and determine how we are to proceed. Otherwise,
+        // we need to continue down the chain with a new start (i.e., a null value).
 
-    return continuation;
+        this.executor_.execute (new Runnable ()
+        {
+          @Override
+          public void run ()
+          {
+            if (onResolved != null)
+            {
+              try
+              {
+                Promise promise = onResolved.onResolved (value_);
+                continuation.continueWith (promise);
+              }
+              catch (Exception e)
+              {
+                continuation.continueWith (e);
+              }
+            }
+            else
+            {
+              continuation.continueWithNull ();
+            }
+          }
+        });
+      }
+      else if (this.status_ == Status.Rejected)
+      {
+        // We are handling the rejection as this level. Either we are going to handle
+        // the rejection as this level via a onRejected handler, or we are going to
+        // pass the rejection to the next level.
+        this.executor_.execute (new Runnable ()
+        {
+          @Override
+          public void run ()
+          {
+            if (onRejected != null)
+            {
+              try
+              {
+                Promise promise = onRejected.onRejected (rejection_);
+                continuation.continueWith (promise);
+              }
+              catch (Exception e)
+              {
+                continuation.continueWith (e);
+              }
+            }
+            else
+            {
+              continuation.continueWith (rejection_);
+            }
+          }
+        });
+      }
+      else
+      {
+        // The promise is still pending. We need to add the resolved and rejected
+        // handlers to the waiting list along with the continuation promise returned
+        // from this call. This ensure the promise from the resolve/rejected handlers
+        // is passed to the correct continuation promise.
+        this.pendingEntries_.add (new PendingEntry<> (continuation, onResolved, onRejected));
+      }
+
+      return continuation;
+    }
+    finally
+    {
+      this.stateLock_.readLock ().unlock ();
+    }
   }
 
   @SuppressWarnings ("unchecked")
@@ -396,14 +409,25 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   protected void onResolve (T value)
   {
-    // Cache the result of the promise.
-    this.status_ = Status.Resolved;
-    this.value_ = value;
+    try
+    {
+      // Get a write lock to the state since we are updating it. We do not want
+      // other threads reading the state until we are done.
+      this.stateLock_.writeLock ().lock ();
+
+      // Cache the result of the promise.
+      this.status_ = Status.Resolved;
+      this.value_ = value;
+    }
+    finally
+    {
+      this.stateLock_.writeLock ().unlock ();
+    }
 
     if (this.pendingEntries_.isEmpty ())
       return;
 
-    for (final PendingEntry <T> entry: this.pendingEntries_)
+    for (final PendingEntry<T> entry : this.pendingEntries_)
     {
       this.executor_.execute (new Runnable ()
       {
@@ -442,8 +466,17 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   protected void onReject (Throwable reason)
   {
-    this.rejection_ = reason;
-    this.status_ = Status.Rejected;
+    try
+    {
+      this.stateLock_.writeLock ().lock ();
+
+      this.rejection_ = reason;
+      this.status_ = Status.Rejected;
+    }
+    finally
+    {
+      this.stateLock_.writeLock ().unlock ();
+    }
 
     if (this.pendingEntries_.isEmpty ())
       return;
