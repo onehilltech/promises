@@ -11,7 +11,7 @@ env:
     - ANDROID_TARGET=android-22  ANDROID_ABI=armeabi-v7a
 
 jdk:
-  - openjdk7
+  - openjdk8
 
 os:
   - linux
