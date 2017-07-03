@@ -42,8 +42,10 @@ The simplest promise to create is one that is already resolved or rejected using
 `Promise.resolve` or `Promise.reject`, respectively.
 
 ```java
+// resolved promise
 Promise.resolve (5);
 
+// rejected promise
 Promise.reject (new IllegalStateException ("This is a rejected promise"));
 ```
 
