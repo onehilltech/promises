@@ -112,8 +112,9 @@ All promises are executed (or settled) when they are first created. To process
 a promise's settlement, use either `then` or `_catch`. It does not matter when you
 call `then` or `_catch`. If the promise is not settled, then the appropriate
 handler will be called after the promise is settled. If the promise is settled,
-then the appropriate handler will be called as soon as possible. All handlers are 
-executed on a separate thread from the caller.
+then the appropriate handler will be called as soon as possible. 
+
+> **Important.** All handlers are executed on a separate thread.
 
 ```java
 Promise.resolve (5)
@@ -191,21 +192,21 @@ Promise.resolve (5)
 
 In the example above, we must point our several things. First, execution continues
 after the first `_catch` if any of the preceding promises is rejected. If none of
-the promises is rejected, then the first `_catch` is skipped. Second, we are using
+the promises are rejected, then the first `_catch` is skipped. Second, we are using
 Java method references (i.e., `this::doSomethingElse`), which improves the readability
-of the code, and reduces its verbosity. Lastly, `Promise.ignoreReason` is a special 
+of the code, and reduces verbosity. Lastly, `Promise.ignoreReason` is a special 
 handler that will catch the rejection and ignore the reason. This way, you do not have
-to write a bunch of empty handlers as in the first `_catch`.
+to write a bunch of empty handlers like the first `_catch`.
 
 ### Promise.all
 
-The library implements `Promise.all`, which is resolved if all promises are resolved 
-is rejected if any of the promises is rejected.
+The library implements `Promise.all`, which is resolved if **all** promises are resolved 
+and rejected if **any** of the promises is rejected.
 
 ### Promise.race
 
-The library implements `Promise.race`, which is settled with any of the promises is
-either resolved or rejected.
+The library implements `Promise.race`, which is settled when the first promise is either 
+resolved or rejected.
 
 ## Android Support
 
@@ -215,8 +216,8 @@ All promises are settled on a background thread, and the handlers are called on 
 thread. If you attempt to update the UI in the handler, then the Android framework will throw
 an exception. This is because you are updating the UI on a different thread than the one that
 create the UI elements (i.e., the main thread). To address the need for updating the UI in
-the handler methods, the module provides `resolveOnUiThread` and `rejectOnUiThread` helper
-methods for running a handler on the UI thread.
+the handler methods, the Android module provides `resolveOnUiThread` and `rejectOnUiThread` 
+helper methods for running a handler on the UI thread.
 
 ```java
 import static com.onehilltech.promises.Promise.resolved;
@@ -228,7 +229,8 @@ import static com.onehilltech.promises.ResolvedOnUIThread.resolveOnUiThread;
 
 Promise.resolve ("Hello, World!")
        .then (resolveOnUiThread (resolved (str -> {
-        this.label.setText (str);
+         // Update the UI component
+         this.label.setText (str);
        })))
        ._catch (rejectOnUiThread (rejected (reason -> reason.printStackTrace ())));
 ```
