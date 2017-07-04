@@ -7,7 +7,7 @@ env:
       - ANDROID_BUILD_TOOLS_VERSION=25.0.1
       - ADB_INSTALL_TIMEOUT=10
 
-  #matrix:
+  matrix:
     - ANDROID_TARGET=android-25  ANDROID_ABI=armeabi-v7a
 
 android:
