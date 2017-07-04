@@ -12,6 +12,7 @@ env:
 
 android:
   components:
+
     # Use the latest revision of Android SDK Tools
     - tools
     - platform-tools
@@ -38,12 +39,12 @@ os:
 
 before_script:
   # Create and start emulator
-  - chmod +x gradlew
+  #- chmod +x gradlew
   - pip install --user codecov
-  - echo no | android create avd --force -n test -t android-25 --abi armeabi-v7a
-  - emulator -avd test -no-skin -no-audio -no-window &
-  - android-wait-for-emulator
-  - adb shell input keyevent 82 &
+  #- echo no | android create avd --force -n test -t android-25 --abi armeabi-v7a
+  #- emulator -avd test -no-skin -no-audio -no-window &
+  #- android-wait-for-emulator
+  #- adb shell input keyevent 82 &
 
 script:
   - ./gradlew build test
