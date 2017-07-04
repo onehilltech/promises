@@ -24,14 +24,15 @@ buildscript {
 }
 
 dependencies {
+  # includes all submodules
   compile com.onehilltech:promises:x.y.z
   
   # or 
     
-  # for JVM projects
+  # for JVM-only projects
   compile com.onehilltech.promises:promises-jvm:x.y.z
   
-  # for Android projects
+  # for Android projects (includes JVM automatically)
   compile com.onehilltech.promises:promises-android:x.y.z
 }
 ```
