@@ -114,7 +114,7 @@ call `then` or `_catch`. If the promise is not settled, then the appropriate
 handler will be called after the promise is settled. If the promise is settled,
 then the appropriate handler will be called as soon as possible. 
 
-> *Important.* All handlers are executed on a separate thread.
+> **Important.** All handlers are executed on a separate thread.
 
 ```java
 Promise.resolve (5)
