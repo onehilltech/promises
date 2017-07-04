@@ -25,7 +25,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static com.onehilltech.promises.Promise.resolved;
-import static com.onehilltech.promises.ResolvedOnUIThread.resolveOnUiThread;
+import static com.onehilltech.promises.Promise.rejected;
+import static com.onehilltech.promises.ResolvedOnUIThread.onUiThread;
+import static com.onehilltech.promises.RejectedOnUIThread.onUiThread;
 
 @RunWith(AndroidJUnit4.class)
 public class ResolvedOnUIThreadTest
@@ -45,7 +47,7 @@ public class ResolvedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.resolve (10)
-             .then (resolveOnUiThread (resolved (new Promise.ResolveNoReturn<Integer> ()
+             .then (onUiThread (resolved (new Promise.ResolveNoReturn<Integer> ()
              {
                @Override
                public void resolveNoReturn (Integer value)
@@ -58,6 +60,13 @@ public class ResolvedOnUIThreadTest
                    complete_ = true;
                    lock_.notify ();
                  }
+               }
+             })))
+             ._catch (onUiThread (rejected (new Promise.RejectNoReturn () {
+               @Override
+               public void rejectNoReturn (Throwable reason)
+               {
+
                }
              })));
 

@@ -24,8 +24,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static com.onehilltech.promises.RejectedOnUIThread.rejectOnUiThread;
 import static com.onehilltech.promises.Promise.rejected;
+import static com.onehilltech.promises.RejectedOnUIThread.onUiThread;
 
 @RunWith(AndroidJUnit4.class)
 public class RejectedOnUIThreadTest
@@ -46,7 +46,7 @@ public class RejectedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (rejectOnUiThread (rejected (new Promise.RejectNoReturn ()
+             ._catch (onUiThread (rejected (new Promise.RejectNoReturn ()
              {
                @Override
                public void rejectNoReturn (Throwable reason)

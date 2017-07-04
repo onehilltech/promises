@@ -31,7 +31,7 @@ public class RejectedOnUIThread extends OnUIThread
    * @param onRejected      The real handler
    * @return                Promise.OnRejected object
    */
-  public static Promise.OnRejected rejectOnUiThread (@NonNull Promise.OnRejected onRejected)
+  public static Promise.OnRejected onUiThread (@NonNull Promise.OnRejected onRejected)
   {
     return new RejectedOnUIThread (onRejected);
   }

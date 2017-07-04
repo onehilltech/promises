@@ -34,7 +34,7 @@ public class ResolvedOnUIThread <T, U> extends OnUIThread
    * @param <U>               Parameter type of the next value
    * @return                  Promise.OnResolved object
    */
-  public static <T, U> Promise.OnResolved <T, U> resolveOnUiThread (@NonNull Promise.OnResolved <T, U> onResolved)
+  public static <T, U> Promise.OnResolved <T, U> onUiThread (@NonNull Promise.OnResolved <T, U> onResolved)
   {
     return new ResolvedOnUIThread<> (onResolved);
   }
