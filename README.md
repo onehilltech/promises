@@ -229,7 +229,8 @@ import static com.onehilltech.promises.ResolvedOnUIThread.resolveOnUiThread;
 
 Promise.resolve ("Hello, World!")
        .then (resolveOnUiThread (resolved (str -> {
-        this.label.setText (str);
+         // Update the UI component
+         this.label.setText (str);
        })))
        ._catch (rejectOnUiThread (rejected (reason -> reason.printStackTrace ())));
 ```
