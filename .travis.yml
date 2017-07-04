@@ -4,7 +4,7 @@ sudo: false
 
 env:
   global:
-      - ANDROID_BUILD_TOOLS_VERSION=25.0.2
+      - ANDROID_BUILD_TOOLS_VERSION=25.0.0
       - ADB_INSTALL_TIMEOUT=10
 
   matrix:
@@ -14,10 +14,12 @@ android:
   components:
     # Use the latest revision of Android SDK Tools
     - tools
-    - build-tools-$ANDROID_BUILD_TOOLS_VERSION
     - platform-tools
+    - tools
     - extra-android-m2repository
     - extra-google-android-support
+
+    - build-tools-$ANDROID_BUILD_TOOLS_VERSION
 
     # The SDK version used to compile your project
     - $ANDROID_TARGET
@@ -26,7 +28,7 @@ android:
     - sys-img-$ANDROID_ABI-$ANDROID_TARGET
 
   licenses:
-      - 'android-sdk-preview-license-.+'
+      - 'android-sdk-preview-license-52d11cd2'
       - 'android-sdk-license-.+'
       - 'google-gdk-license-.+'
 
