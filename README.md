@@ -24,11 +24,6 @@ buildscript {
 }
 
 dependencies {
-  # includes all submodules
-  compile com.onehilltech:promises:x.y.z
-  
-  # or 
-    
   # for JVM-only projects
   compile com.onehilltech.promises:promises-jvm:x.y.z
   
