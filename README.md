@@ -216,23 +216,23 @@ All promises are settled on a background thread, and the handlers are called on 
 thread. If you attempt to update the UI in the handler, then the Android framework will throw
 an exception. This is because you are updating the UI on a different thread than the one that
 create the UI elements (i.e., the main thread). To address the need for updating the UI in
-the handler methods, the Android module provides `resolveOnUiThread` and `rejectOnUiThread` 
-helper methods for running a handler on the UI thread.
+the handler methods, the Android module provides `onUiThread` helper methods for running a 
+handler on the UI thread.
 
 ```java
 import static com.onehilltech.promises.Promise.resolved;
 import static com.onehilltech.promises.Promise.rejected;
-import static com.onehilltech.promises.RejectedOnUIThread.rejectOnUiThread;
-import static com.onehilltech.promises.ResolvedOnUIThread.resolveOnUiThread;
+import static com.onehilltech.promises.RejectedOnUIThread.onUiThread;
+import static com.onehilltech.promises.ResolvedOnUIThread.onUiThread;
 
 // ...
 
 Promise.resolve ("Hello, World!")
-       .then (resolveOnUiThread (resolved (str -> {
+       .then (onUiThread (resolved (str -> {
          // Update the UI component
          this.label.setText (str);
        })))
-       ._catch (rejectOnUiThread (rejected (reason -> reason.printStackTrace ())));
+       ._catch (onUiThread (rejected (reason -> reason.printStackTrace ())));
 ```
 
 
