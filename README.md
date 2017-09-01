@@ -1,6 +1,8 @@
 promises
 ==========
 
+
+[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-Promises-brightgreen.svg?style=flat)](https://android-arsenal.com/details/1/6140)
 [![](https://jitpack.io/v/onehilltech/promises.svg)](https://jitpack.io/#onehilltech/promises)
 [![Build Status](https://travis-ci.org/onehilltech/promises.svg?branch=master)](https://travis-ci.org/onehilltech/promises)
 [![codecov](https://codecov.io/gh/onehilltech/promises/branch/master/graph/badge.svg)](https://codecov.io/gh/onehilltech/promises)
