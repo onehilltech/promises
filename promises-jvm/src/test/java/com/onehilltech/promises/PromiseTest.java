@@ -29,7 +29,7 @@ public class PromiseTest
   {
     synchronized (this.lock_)
     {
-      Promise <Integer> p = Promise.resolve (5);
+      Promise <Integer> p = Promise.resolve (7);
 
       p.then (
           resolved (new Promise.ResolveNoReturn<Integer> ()
@@ -38,7 +38,7 @@ public class PromiseTest
             public void resolveNoReturn (Integer value)
             {
               isComplete_ = true;
-              Assert.assertEquals (5, (int)value);
+              Assert.assertEquals (7, (int)value);
 
               synchronized (lock_)
               {
