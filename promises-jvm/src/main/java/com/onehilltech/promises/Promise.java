@@ -188,6 +188,8 @@ public class Promise <T>
 
   private final Executor executor_;
 
+  private final String name_;
+
   private static class PendingEntry <T>
   {
     final ContinuationPromise <?> cont;
@@ -207,11 +209,22 @@ public class Promise <T>
   /**
    * The executor for the Promise.
    *
-   * @param impl
+   * @param impl        Executor that settles the promise.
    */
   public Promise (PromiseExecutor<T> impl)
   {
-    this (impl, Status.Pending, null, null);
+    this (null, impl);
+  }
+
+  /**
+   * The executor for the promise.
+   *
+   * @param name        Name of the promise
+   * @param impl        Executor that settles the promise.
+   */
+  public Promise (String name, PromiseExecutor<T> impl)
+  {
+    this (name, impl, Status.Pending, null, null);
   }
 
   /**
@@ -221,7 +234,7 @@ public class Promise <T>
    */
   private Promise (T resolve)
   {
-    this (null, Status.Resolved, resolve, null);
+    this (null, null, Status.Resolved, resolve, null);
   }
 
   /**
@@ -231,7 +244,7 @@ public class Promise <T>
    */
   private Promise (Throwable reason)
   {
-    this (null, Status.Rejected, null, reason);
+    this (null, null, Status.Rejected, null, reason);
   }
 
   /**
@@ -241,8 +254,9 @@ public class Promise <T>
    * @param resolve
    * @param reason
    */
-  private Promise (PromiseExecutor<T> impl, Status status, T resolve, Throwable reason)
+  private Promise (String name, PromiseExecutor<T> impl, Status status, T resolve, Throwable reason)
   {
+    this.name_ = name;
     this.impl_ = impl;
     this.value_ = resolve;
     this.rejection_ = reason;
