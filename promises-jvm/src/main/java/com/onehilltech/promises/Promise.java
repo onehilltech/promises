@@ -299,27 +299,35 @@ public class Promise <T>
    */
   public Status getStatus ()
   {
-    return this.status_;
+    try
+    {
+      this.stateLock_.readLock ().lock ();
+      return this.status_;
+    }
+    finally
+    {
+      this.stateLock_.readLock ().unlock ();
+    }
   }
 
   public boolean isCancelled ()
   {
-    return this.status_ == Status.Cancelled;
+    return this.getStatus () == Status.Cancelled;
   }
 
   public boolean isPending ()
   {
-    return this.status_ == Status.Pending;
+    return this.getStatus () == Status.Pending;
   }
 
   public boolean isResolved ()
   {
-    return this.status_ == Status.Resolved;
+    return this.getStatus () == Status.Resolved;
   }
 
   public boolean isRejected ()
   {
-    return this.status_ == Status.Rejected;
+    return this.getStatus () == Status.Rejected;
   }
 
   /**
@@ -346,6 +354,10 @@ public class Promise <T>
     try
     {
       this.stateLock_.writeLock ().lock ();
+
+      if (this.status_ != Status.Pending)
+        return false;
+
       boolean result = this.future_.cancel (mayInterruptIfRunning);
 
       if (result)
@@ -500,14 +512,8 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   void onResolve (T value)
   {
-    // If the promise is cancelled, then there is nothing else we can do. We are
-    // not even going to throw an exception since there is a good chance the
-    // chance has a _catch() chain that recovers from intended failures.
-
-    if (this.status_ == Status.Cancelled)
-      return;
-
-    // Check that the promise is still pending.
+    // Check that the promise is still pending. This is an implementation of the
+    // double-checked locking software design pattern.
     if (this.status_ != Status.Pending)
       throw new IllegalStateException ("Promise must be pending to resolve");
 
@@ -516,6 +522,10 @@ public class Promise <T>
       // Get a write lock to the state since we are updating it. We do not want
       // other threads reading the state until we are done.
       this.stateLock_.writeLock ().lock ();
+
+      // Check that the promise is still pending.
+      if (this.status_ != Status.Pending)
+        throw new IllegalStateException ("Promise must be pending to resolve");
 
       // Cache the result of the promise.
       this.status_ = Status.Resolved;
@@ -568,20 +578,20 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   void onReject (Throwable reason)
   {
-    // If the promise is cancelled, then there is nothing else we can do. We are
-    // not even going to throw an exception since there is a good chance the
-    // chance has a _catch() chain that recovers from intended failures.
-
-    if (this.status_ == Status.Cancelled)
-      return;
-
-    // Check that the promise is still pending.
+    // Check that the promise is still pending. This is an implementation of the
+    // double-checked locking software design pattern.
     if (this.status_ != Status.Pending)
-      throw new IllegalStateException ("Promise must be pending to reject");
+      throw new IllegalStateException ("Promise must be pending to resolve");
 
     try
     {
+      // Get a write lock to the state since we are updating it. We do not want
+      // other threads reading the state until we are done.
       this.stateLock_.writeLock ().lock ();
+
+      // Check that the promise is still pending.
+      if (this.status_ != Status.Pending)
+        throw new IllegalStateException ("Promise must be pending to resolve");
 
       this.rejection_ = reason;
       this.status_ = Status.Rejected;
