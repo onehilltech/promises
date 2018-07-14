@@ -911,6 +911,47 @@ public class PromiseTest
     }
   }
 
+  @Test
+  public void testCancel () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise<Integer> p1 = new Promise<> (new PromiseExecutor<Integer> ()
+      {
+        @Override
+        public void execute (Promise.Settlement<Integer> settlement)
+        {
+          try
+          {
+            Thread.sleep (3000);
+          }
+          catch (InterruptedException e)
+          {
+            isComplete_ = true;
+          }
+        }
+      });
+
+      Thread.sleep (1000);
+      p1.cancel (true);
+
+      p1.then (new Promise.OnResolved<Integer, Object> ()
+      {
+        @Override
+        public Promise<Object> onResolved (Integer value)
+        {
+          isComplete_ = false;
+          return null;
+        }
+      });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (p1.isCancelled ());
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
   public void testNestedPromise ()
       throws Exception
   {

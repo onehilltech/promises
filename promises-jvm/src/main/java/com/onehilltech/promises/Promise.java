@@ -323,6 +323,43 @@ public class Promise <T>
   }
 
   /**
+   * Cancel the promise.
+   *
+   * @return        True if cancelled, otherwise false.
+   */
+  public boolean cancel ()
+  {
+    return this.cancel (true);
+  }
+
+  /**
+   * Cancel the promise
+   *
+   * @param mayInterruptIfRunning         Interrupt promise is running
+   * @return                              True if cancelled; otherwise false
+   */
+  public boolean cancel (boolean mayInterruptIfRunning)
+  {
+    if (this.status_ != Status.Pending)
+      return false;
+
+    try
+    {
+      this.stateLock_.writeLock ().lock ();
+      boolean result = this.future_.cancel (mayInterruptIfRunning);
+
+      if (result)
+        this.status_ = Status.Cancelled;
+
+      return result;
+    }
+    finally
+    {
+      this.stateLock_.writeLock ().unlock ();
+    }
+  }
+
+  /**
    * Settle the promise.
    *
    * @param onResolved          Handler called when resolved.
