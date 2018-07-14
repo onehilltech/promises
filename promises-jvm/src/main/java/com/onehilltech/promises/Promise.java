@@ -21,9 +21,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -155,18 +155,30 @@ public class Promise <T>
 
   public enum Status
   {
+    /// The promise is in a pending state.
     Pending,
+
+    /// The promise has been resolved.
     Resolved,
-    Rejected
+
+    /// The promise has been rejected.
+    Rejected,
+
+    /// The promise has been cancelled.
+    Cancelled
   }
 
   /// The resolved value for the promise.
   private T value_;
 
+  /// Current status for the promise.
   private Status status_;
 
+  /// Future for the promise execution.
+  private Future<?> future_;
+
   /// The rejected value for the promise.
-  protected Throwable rejection_;
+  private Throwable rejection_;
 
   private final ReentrantReadWriteLock stateLock_ = new ReentrantReadWriteLock ();
 
@@ -186,7 +198,7 @@ public class Promise <T>
 
   private final PromiseExecutor<T> impl_;
 
-  private final Executor executor_;
+  private final ExecutorService executor_;
 
   private final String name_;
 
@@ -250,9 +262,10 @@ public class Promise <T>
   /**
    * Initializing constructor.
    *
-   * @param impl
-   * @param resolve
-   * @param reason
+   * @param name            Name of the promise
+   * @param impl            Promise executor implementation
+   * @param resolve         Resolved value
+   * @param reason          Rejected value
    */
   private Promise (String name, PromiseExecutor<T> impl, Status status, T resolve, Throwable reason)
   {
@@ -269,15 +282,50 @@ public class Promise <T>
       this.settlePromise ();
   }
 
+  /**
+   * Get the name of the promise.
+   *
+   * @return        Name of promise
+   */
+  public String getName ()
+  {
+    return this.name_;
+  }
+
+  /**
+   * Get the status of the promise.
+   *
+   * @return          Status enumeration
+   */
   public Status getStatus ()
   {
     return this.status_;
   }
 
+  public boolean isCancelled ()
+  {
+    return this.status_ == Status.Cancelled;
+  }
+
+  public boolean isPending ()
+  {
+    return this.status_ == Status.Pending;
+  }
+
+  public boolean isResolved ()
+  {
+    return this.status_ == Status.Resolved;
+  }
+
+  public boolean isRejected ()
+  {
+    return this.status_ == Status.Rejected;
+  }
+
   /**
    * Settle the promise.
    *
-   * @param onResolved
+   * @param onResolved          Handler called when resolved.
    */
   public <U> Promise <U> then (OnResolved <T, U> onResolved)
   {
@@ -287,8 +335,8 @@ public class Promise <T>
   /**
    * Settle the promise. The promised will either be resolved or rejected.
    *
-   * @param onResolved
-   * @param onRejected
+   * @param onResolved          Handler called when resolved.
+   * @param onRejected          Handler called when rejected.
    */
   @SuppressWarnings ("unchecked")
   public <U> Promise <U> then (final OnResolved <T, U> onResolved, final OnRejected onRejected)
@@ -306,7 +354,7 @@ public class Promise <T>
         // then we need to invoke it and determine how we are to proceed. Otherwise,
         // we need to continue down the chain with a new start (i.e., a null value).
 
-        this.executor_.execute (new Runnable ()
+        this.executor_.submit (new Runnable ()
         {
           @Override
           public void run ()
@@ -335,7 +383,7 @@ public class Promise <T>
         // We are handling the rejection as this level. Either we are going to handle
         // the rejection as this level via a onRejected handler, or we are going to
         // pass the rejection to the next level.
-        this.executor_.execute (new Runnable ()
+        this.executor_.submit (new Runnable ()
         {
           @Override
           public void run ()
@@ -359,7 +407,7 @@ public class Promise <T>
           }
         });
       }
-      else
+      else if (this.status_ == Status.Pending)
       {
         // The promise is still pending. We need to add the resolved and rejected
         // handlers to the waiting list along with the continuation promise returned
@@ -379,7 +427,7 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   private void settlePromise ()
   {
-    this.executor_.execute (new Runnable ()
+    this.future_ = this.executor_.submit (new Runnable ()
     {
       @Override
       public void run ()
@@ -394,20 +442,12 @@ public class Promise <T>
             @Override
             public void resolve (T value)
             {
-              // Check that the promise is still pending.
-              if (status_ != Status.Pending)
-                throw new IllegalStateException ("Promise must be pending to resolve");
-
               onResolve (value);
             }
 
             @Override
             public void reject (Throwable reason)
             {
-              // Check that the promise is still pending.
-              if (status_ != Status.Pending)
-                throw new IllegalStateException ("Promise must be pending to reject");
-
               onReject (reason);
             }
           });
@@ -421,8 +461,19 @@ public class Promise <T>
   }
 
   @SuppressWarnings ("unchecked")
-  protected void onResolve (T value)
+  void onResolve (T value)
   {
+    // If the promise is cancelled, then there is nothing else we can do. We are
+    // not even going to throw an exception since there is a good chance the
+    // chance has a _catch() chain that recovers from intended failures.
+
+    if (this.status_ == Status.Cancelled)
+      return;
+
+    // Check that the promise is still pending.
+    if (this.status_ != Status.Pending)
+      throw new IllegalStateException ("Promise must be pending to resolve");
+
     try
     {
       // Get a write lock to the state since we are updating it. We do not want
@@ -478,8 +529,19 @@ public class Promise <T>
    * @param reason
    */
   @SuppressWarnings ("unchecked")
-  protected void onReject (Throwable reason)
+  void onReject (Throwable reason)
   {
+    // If the promise is cancelled, then there is nothing else we can do. We are
+    // not even going to throw an exception since there is a good chance the
+    // chance has a _catch() chain that recovers from intended failures.
+
+    if (this.status_ == Status.Cancelled)
+      return;
+
+    // Check that the promise is still pending.
+    if (this.status_ != Status.Pending)
+      throw new IllegalStateException ("Promise must be pending to reject");
+
     try
     {
       this.stateLock_.writeLock ().lock ();

@@ -910,4 +910,43 @@ public class PromiseTest
       Assert.assertTrue (this.isComplete_);
     }
   }
+
+  public void testNestedPromise ()
+      throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      this.makeSimplePromise (25)
+          .then (new Promise.OnResolved<Integer, Integer> () {
+            @Override
+            public Promise<Integer> onResolved (final Integer value)
+            {
+              return new Promise<> (new PromiseExecutor<Integer> ()
+              {
+                @Override
+                public void execute (Promise.Settlement<Integer> settlement)
+                {
+                  settlement.resolve (value);
+                }
+              });
+            }
+          });
+
+      this.lock_.wait (10000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  private Promise <Integer> makeSimplePromise (final int value)
+  {
+    return new Promise<> (new PromiseExecutor<Integer> ()
+    {
+      @Override
+      public void execute (Promise.Settlement<Integer> settlement)
+      {
+        settlement.resolve (value);
+      }
+    });
+  }
 }
