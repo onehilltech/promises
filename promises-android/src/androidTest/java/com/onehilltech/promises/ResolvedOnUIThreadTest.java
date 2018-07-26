@@ -17,6 +17,7 @@
 package com.onehilltech.promises;
 
 import android.os.Looper;
+import android.support.test.annotation.UiThreadTest;
 import android.support.test.runner.AndroidJUnit4;
 
 import org.junit.Assert;
@@ -42,7 +43,7 @@ public class ResolvedOnUIThreadTest
   }
 
   @Test
-  public void testResolvedOnUiThread () throws Exception
+  public void testResolved () throws Exception
   {
     synchronized (this.lock_)
     {
@@ -71,6 +72,36 @@ public class ResolvedOnUIThreadTest
              })));
 
       this.lock_.wait (5000);
+
+      Assert.assertTrue (this.complete_);
+    }
+  }
+
+  @UiThreadTest
+  @Test
+  public void testResolvedOnUiThread ()
+  {
+    synchronized (this.lock_)
+    {
+      Promise.resolve (10)
+             .then (onUiThread (resolved (new Promise.ResolveNoReturn<Integer> ()
+             {
+               @Override
+               public void resolveNoReturn (Integer value)
+               {
+                 boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
+                 Assert.assertTrue (isUiThread);
+
+                 complete_ = true;
+               }
+             })))
+             ._catch (onUiThread (rejected (new Promise.RejectNoReturn () {
+               @Override
+               public void rejectNoReturn (Throwable reason)
+               {
+
+               }
+             })));
 
       Assert.assertTrue (this.complete_);
     }

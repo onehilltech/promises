@@ -45,8 +45,8 @@ dependencies {
     compile project (':promises-jvm')
     compile 'com.android.support:support-annotations:27.1.1'
 
-    androidTestCompile 'junit:junit:4.12'
-    androidTestCompile('com.android.support.test:testing-support-lib:0.1') {
-        exclude group: 'junit'
-    }
+    androidTestCompile 'com.android.support:support-annotations:27.1.1'
+    androidTestCompile 'com.android.support.test:runner:1.0.2'
+    androidTestCompile 'com.android.support.test:rules:1.0.2'
+    androidTestCompile 'com.android.support.test.espresso:espresso-core:3.0.2'
 }

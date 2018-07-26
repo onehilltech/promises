@@ -16,13 +16,24 @@
 
 package com.onehilltech.promises;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.annotation.NonNull;
+
+import java.util.concurrent.Executor;
 
 /**
  * Proxy that run the OnRejected handler on the UI thread.
+ *
+ * If the handler is already on the UI thread, then the handler continues processing
+ * the execute value on the same thread. If the handler is not on the UI thread, then
+ * it will run on the UI thread.
+ *
+ * This design make is so the caller does not experience any context switches if the
+ * root promise starts on the UI thread, and the handler needs to run on the UI thread.
  */
-public class RejectedOnUIThread extends OnUIThread
-    implements Promise.OnRejected
+public class RejectedOnUIThread extends Promise.OnRejected
 {
   /**
    * Factory method that supports using a lambda function. It also removes the need
@@ -40,7 +51,7 @@ public class RejectedOnUIThread extends OnUIThread
   private final Promise.OnRejected onRejected_;
 
   /// Mock continuation promise.
-  private final ContinuationPromise cont_ = new ContinuationPromise ();
+  private ContinuationPromise cont_;
 
   /// The reason for the failure.
   private Throwable reason_;
@@ -56,27 +67,54 @@ public class RejectedOnUIThread extends OnUIThread
   }
 
   @Override
+  void execute (Executor executor, final Throwable reason, final ContinuationPromise continuation)
+  {
+    if (this.isUiThread ())
+    {
+      // We are already running on the UI thread. Let's just continue with the
+      // continuation promise so the original caller does not see any disruption.
+
+      this.execute (reason, continuation);
+    }
+    else
+    {
+      // Schedule the rejection handler to run on the UI thread.
+      this.reason_ = reason;
+      this.cont_ = continuation;
+
+      this.runOnUiThread ();
+    }
+  }
+
+  private boolean isUiThread ()
+  {
+    return Looper.getMainLooper ().equals (Looper.myLooper ());
+  }
+
+  @Override
   public Promise onRejected (Throwable reason)
   {
-    this.reason_ = reason;
-
-    this.runOnUiThread ();
-
-    return this.cont_;
+    return this.onRejected_.onRejected (reason);
   }
 
-  @SuppressWarnings ("unchecked")
-  @Override
-  protected void run ()
+  /**
+   * Run the handler on the UI thread.
+   */
+  private void runOnUiThread ()
   {
-    try
-    {
-      Promise promise = this.onRejected_.onRejected (this.reason_);
-      this.cont_.continueWith (promise);
-    }
-    catch (Exception e)
-    {
-      this.cont_.continueWith (e);
-    }
+    Message message = uiHandler_.obtainMessage (0, this);
+    message.sendToTarget ();
   }
+
+  /**
+   * Implementation of the Looper that runs the handler on the UI thread.
+   */
+  private static final Handler uiHandler_ = new Handler (Looper.getMainLooper ()) {
+    @Override
+    public void handleMessage (Message msg)
+    {
+      RejectedOnUIThread onUIThread = (RejectedOnUIThread) msg.obj;
+      onUIThread.execute (onUIThread.reason_, onUIThread.cont_);
+    }
+  };
 }

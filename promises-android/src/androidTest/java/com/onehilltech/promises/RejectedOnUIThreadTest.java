@@ -18,6 +18,7 @@ package com.onehilltech.promises;
 
 import android.os.Looper;
 import android.support.test.runner.AndroidJUnit4;
+import android.test.UiThreadTest;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,7 +42,7 @@ public class RejectedOnUIThreadTest
   }
 
   @Test
-  public void testRejectedOnUiThread () throws Exception
+  public void testRejected () throws Exception
   {
     synchronized (this.lock_)
     {
@@ -67,4 +68,31 @@ public class RejectedOnUIThreadTest
       Assert.assertTrue (this.complete_);
     }
   }
+
+  @UiThreadTest
+  @Test
+  public void testRejectedOnUiThread ()
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ())
+             ._catch (onUiThread (rejected (new Promise.RejectNoReturn ()
+             {
+               @Override
+               public void rejectNoReturn (Throwable reason)
+               {
+                 boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
+                 Assert.assertTrue (isUiThread);
+
+                 complete_ = true;
+               }
+             })));
+
+      // We should complete the promise sequence before even reaching this
+      // point since everything runs on the UI thread.
+
+      Assert.assertTrue (this.complete_);
+    }
+  }
+
 }
