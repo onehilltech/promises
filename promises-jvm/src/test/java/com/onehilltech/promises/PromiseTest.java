@@ -32,7 +32,7 @@ public class PromiseTest
       Promise <Integer> p = Promise.resolve (7);
 
       p.then (
-          resolved (new Promise.ResolveNoReturn<Integer> ()
+          resolved (new ResolveNoReturn<Integer> ()
           {
             @Override
             public void resolveNoReturn (Integer value)
@@ -61,13 +61,13 @@ public class PromiseTest
     {
       Promise <Integer> p = Promise.reject (new IllegalStateException ());
 
-      p.then (new Promise.OnResolved<Integer, Integer> () {
+      p.then (new OnResolved<Integer, Integer> () {
         @Override
         public Promise<Integer> onResolved (Integer value)
         {
           return Promise.resolve (5);
         }
-      }, rejected (new Promise.RejectNoReturn () {
+      }, rejected (new RejectNoReturn () {
         @Override
         public void rejectNoReturn (Throwable reason)
         {
@@ -161,25 +161,25 @@ public class PromiseTest
 
     synchronized (this.lock_)
     {
-      p1.then (new Promise.OnResolved<Integer, Integer> () {
+      p1.then (new OnResolved<Integer, Integer> () {
         @Override
         public Promise<Integer> onResolved (Integer value)
         {
           return p2;
         }
-      }).then (new Promise.OnResolved<Integer, Integer> () {
+      }).then (new OnResolved<Integer, Integer> () {
         @Override
         public Promise<Integer> onResolved (Integer value)
         {
           return p3;
         }
-      }).then (new Promise.OnResolved<Integer, Integer> () {
+      }).then (new OnResolved<Integer, Integer> () {
         @Override
         public Promise<Integer> onResolved (Integer value)
         {
           return p4;
         }
-      }).then (resolved (new Promise.ResolveNoReturn<Integer> () {
+      }).then (resolved (new ResolveNoReturn<Integer> () {
         @Override
         public void resolveNoReturn (Integer value)
         {
@@ -192,7 +192,7 @@ public class PromiseTest
             lock_.notify ();
           }
         }
-      }))._catch (rejected (new Promise.RejectNoReturn () {
+      }))._catch (rejected (new RejectNoReturn () {
         @Override
         public void rejectNoReturn (Throwable reason)
         {
@@ -228,7 +228,7 @@ public class PromiseTest
                 }
               }));
 
-      p.then (resolved (new Promise.ResolveNoReturn<List<Object>> ()
+      p.then (resolved (new ResolveNoReturn<List<Object>> ()
       {
         @Override
         public void resolveNoReturn (List<Object> value)
@@ -317,19 +317,19 @@ public class PromiseTest
         }
       });
 
-      start.then (new Promise.OnResolved<Integer, Integer> () {
+      start.then (new OnResolved<Integer, Integer> () {
         @Override
         public Promise<Integer> onResolved (Integer value)
         {
           return middle;
         }
-      }).then (new Promise.OnResolved<Integer, List <Object>> () {
+      }).then (new OnResolved<Integer, List <Object>> () {
         @Override
         public Promise<List <Object>> onResolved (Integer value)
         {
           return Promise.all (promises);
         }
-      }).then (resolved (new Promise.ResolveNoReturn<List<Object>> ()
+      }).then (resolved (new ResolveNoReturn<List<Object>> ()
       {
         @Override
         public void resolveNoReturn (List<Object> result)
@@ -372,7 +372,7 @@ public class PromiseTest
   public void testRejectOnly () throws Exception
   {
     Promise.reject (new IllegalStateException ())
-           ._catch (rejected (new Promise.RejectNoReturn ()
+           ._catch (rejected (new RejectNoReturn ()
            {
              @Override
              public void rejectNoReturn (Throwable reason)
@@ -400,7 +400,7 @@ public class PromiseTest
   {
     synchronized (this.lock_)
     {
-      Promise.OnResolved <String, Long> completion1 = new Promise.OnResolved<String, Long> ()
+      OnResolved<String, Long> completion1 = new OnResolved<String, Long> ()
       {
         @Override
         public Promise<Long> onResolved (String str)
@@ -410,7 +410,7 @@ public class PromiseTest
         }
       };
 
-      Promise.OnResolved <Long, Void> completion2 = resolved (new Promise.ResolveNoReturn<Long> ()
+      OnResolved<Long, Void> completion2 = resolved (new ResolveNoReturn<Long> ()
       {
         @Override
         public void resolveNoReturn (Long value)
@@ -441,7 +441,7 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.resolve ("Hello, World")
-             .then (new Promise.OnResolved<String, Integer> () {
+             .then (new OnResolved<String, Integer> () {
                @Override
                public Promise<Integer> onResolved (String str)
                {
@@ -449,7 +449,7 @@ public class PromiseTest
                  return Promise.resolve (10);
                }
              })
-             .then (resolved (new Promise.ResolveNoReturn<Integer> ()
+             .then (resolved (new ResolveNoReturn<Integer> ()
              {
                @Override
                public void resolveNoReturn (Integer value)
@@ -477,14 +477,14 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.resolve ("Hello, World")
-             .then (resolved (new Promise.ResolveNoReturn<String> () {
+             .then (resolved (new ResolveNoReturn<String> () {
                @Override
                public void resolveNoReturn (String str)
                {
                  Assert.assertEquals ("Hello, World", str);
                }
              }))
-             .then (resolved (new Promise.ResolveNoReturn<Object> () {
+             .then (resolved (new ResolveNoReturn<Object> () {
                @Override
                public void resolveNoReturn (Object value)
                {
@@ -510,7 +510,7 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ("GREAT"))
-             .then (new Promise.OnResolved<Object, Integer> () {
+             .then (new OnResolved<Object, Integer> () {
                @Override
                public Promise<Integer> onResolved (Object value)
                {
@@ -518,7 +518,7 @@ public class PromiseTest
                  return Promise.resolve (10);
                }
              })
-             .then (new Promise.OnResolved<Integer, Integer> () {
+             .then (new OnResolved<Integer, Integer> () {
                @Override
                public Promise<Integer> onResolved (Integer value)
                {
@@ -526,7 +526,7 @@ public class PromiseTest
                  return Promise.resolve (40);
                }
              })
-             ._catch (rejected (new Promise.RejectNoReturn ()
+             ._catch (rejected (new RejectNoReturn ()
              {
                @Override
                public void rejectNoReturn (Throwable reason)
@@ -555,7 +555,7 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ("GREAT"))
-             .then (new Promise.OnResolved<Object, Integer> () {
+             .then (new OnResolved<Object, Integer> () {
                @Override
                public Promise<Integer> onResolved (Object value)
                {
@@ -563,7 +563,7 @@ public class PromiseTest
                  return Promise.resolve (10);
                }
              })
-             .then (new Promise.OnResolved<Integer, Integer> () {
+             .then (new OnResolved<Integer, Integer> () {
                @Override
                public Promise<Integer> onResolved (Integer value)
                {
@@ -571,7 +571,7 @@ public class PromiseTest
                  return Promise.resolve (40);
                }
              })
-             ._catch (rejected (new Promise.RejectNoReturn ()
+             ._catch (rejected (new RejectNoReturn ()
              {
                @Override
                public void rejectNoReturn (Throwable reason)
@@ -587,7 +587,7 @@ public class PromiseTest
                  }
                }
              }))
-             ._catch (rejected (new Promise.RejectNoReturn ()
+             ._catch (rejected (new RejectNoReturn ()
              {
                @Override
                public void rejectNoReturn (Throwable reason)
@@ -619,7 +619,7 @@ public class PromiseTest
                  return Promise.resolve (10);
                }
              })
-             .then (resolved (new Promise.ResolveNoReturn<Object> () {
+             .then (resolved (new ResolveNoReturn<Object> () {
                @Override
                public void resolveNoReturn (Object value)
                {
@@ -646,7 +646,7 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             .then (resolved (new Promise.ResolveNoReturn<Object> () {
+             .then (resolved (new ResolveNoReturn<Object> () {
                @Override
                public void resolveNoReturn (Object value)
                {
@@ -673,14 +673,14 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (rejected (new Promise.RejectNoReturn () {
+             ._catch (rejected (new RejectNoReturn () {
                @Override
                public void rejectNoReturn (Throwable reason)
                {
                  Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                }
              }))
-             .then (resolved (new Promise.ResolveNoReturn<Object> () {
+             .then (resolved (new ResolveNoReturn<Object> () {
                @Override
                public void resolveNoReturn (Object value)
                {
@@ -707,14 +707,14 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.resolve (50)
-             ._catch (rejected (new Promise.RejectNoReturn () {
+             ._catch (rejected (new RejectNoReturn () {
                @Override
                public void rejectNoReturn (Throwable reason)
                {
                  Assert.fail ();
                }
              }))
-             .then (resolved (new Promise.ResolveNoReturn<Object> () {
+             .then (resolved (new ResolveNoReturn<Object> () {
                @Override
                public void resolveNoReturn (Object value)
                {
@@ -741,14 +741,14 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (rejected (new Promise.RejectNoReturn () {
+             ._catch (rejected (new RejectNoReturn () {
                @Override
                public void rejectNoReturn (Throwable reason)
                {
                  Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                }
              }))
-             .then (resolved (new Promise.ResolveNoReturn<Object> () {
+             .then (resolved (new ResolveNoReturn<Object> () {
                @Override
                public void resolveNoReturn (Object value)
                {
@@ -775,7 +775,7 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.race (new ArrayList<Promise<Integer>> ())
-             .then (resolved (new Promise.ResolveNoReturn<Integer> ()
+             .then (resolved (new ResolveNoReturn<Integer> ()
              {
                @Override
                public void resolveNoReturn (Integer value)
@@ -854,7 +854,7 @@ public class PromiseTest
               })
           );
 
-      p.then (resolved (new Promise.ResolveNoReturn<Integer> () {
+      p.then (resolved (new ResolveNoReturn<Integer> () {
         @Override
         public void resolveNoReturn (Integer value)
         {
@@ -869,7 +869,7 @@ public class PromiseTest
           }
         }
       }))
-      ._catch (rejected (new Promise.RejectNoReturn () {
+      ._catch (rejected (new RejectNoReturn () {
         @Override
         public void rejectNoReturn (Throwable reason)
         {
@@ -890,7 +890,7 @@ public class PromiseTest
     {
       Promise.resolve (5)
              ._catch (ignoreReason)
-             .then (resolved (new Promise.ResolveNoReturn<Object> () {
+             .then (resolved (new ResolveNoReturn<Object> () {
                @Override
                public void resolveNoReturn (Object value)
                {
@@ -923,7 +923,7 @@ public class PromiseTest
         {
           try
           {
-            Thread.sleep (3000);
+            Thread.sleep (300);
           }
           catch (InterruptedException e)
           {
@@ -932,10 +932,10 @@ public class PromiseTest
         }
       });
 
-      Thread.sleep (1000);
+      Thread.sleep (100);
       p1.cancel (true);
 
-      p1.then (new Promise.OnResolved<Integer, Object> ()
+      p1.then (new OnResolved<Integer, Object> ()
       {
         @Override
         public Promise<Object> onResolved (Integer value)
@@ -945,7 +945,7 @@ public class PromiseTest
         }
       });
 
-      this.lock_.wait (5000);
+      this.lock_.wait (100);
 
       Assert.assertTrue (p1.isCancelled ());
       Assert.assertTrue (this.isComplete_);
@@ -958,7 +958,7 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       this.makeSimplePromise (25)
-          .then (new Promise.OnResolved<Integer, Integer> () {
+          .then (new OnResolved<Integer, Integer> () {
             @Override
             public Promise<Integer> onResolved (final Integer value)
             {

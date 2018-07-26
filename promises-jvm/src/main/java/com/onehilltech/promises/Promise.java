@@ -53,129 +53,14 @@ public class Promise <T>
     void reject (Throwable reason);
   }
 
-  /**
-   * Interface for resolving a promise. The promise implementation has the option
-   * of chaining another promise that will be used to get the value for resolve handlers
-   * later in the chain.
-   *
-   * @param <T>
-   */
-  static public abstract class OnResolved <T, U>
+  public interface OnRejected
   {
-    /**
-     * Callback handler for a execute promise.
-     *
-     * @param value         The execute value
-     * @return              Optional promise
-     */
-    public abstract Promise <U> onResolved (T value);
-
-    @SuppressWarnings ("unchecked")
-    void execute (Executor executor, Object objValue, final ContinuationPromise continuation)
-    {
-      final T value = (T)objValue;
-      executor.execute (new Runnable ()
-      {
-        @Override
-        public void run ()
-        {
-          execute (value, continuation);
-        }
-      });
-    }
-
-    @SuppressWarnings ("unchecked")
-    void execute (T value, ContinuationPromise continuation)
-    {
-      try
-      {
-        Promise promise = onResolved (value);
-        continuation.continueWith (promise);
-      }
-      catch (Exception e)
-      {
-        continuation.continueWith (e);
-      }
-    }
-  }
-
-
-
-  /**
-   * Interface for rejecting a promise. The promise implementation has the option
-   * of chaining another promise that will be used to get the value for resolve handlers
-   * later in the chain.
-   */
-  static public abstract class OnRejected
-  {
-    public abstract Promise onRejected (Throwable reason);
-
-    void execute (Executor executor, final Throwable reason, final ContinuationPromise continuation)
-    {
-      executor.execute (new Runnable ()
-      {
-        @Override
-        public void run ()
-        {
-          execute (reason, continuation);
-        }
-      });
-    }
-
-    @SuppressWarnings ("unchecked")
-    protected void execute (final Throwable reason, final ContinuationPromise continuation)
-    {
-      try
-      {
-        Promise promise = onRejected (reason);
-        continuation.continueWith (promise);
-      }
-      catch (Exception e)
-      {
-        continuation.continueWith (e);
-      }
-    }
-  }
-
-  /**
-   * Helper interface for resolving a promise, but does not return a promise to be used in
-   * chain
-   *
-   * @param <T>
-   */
-  public interface ResolveNoReturn <T>
-  {
-    void resolveNoReturn (T value);
+    Promise onRejected (Throwable reason);
   }
 
   public static <T, U> OnResolved <T, U> resolved (ResolveNoReturn <T> resolveNoReturn)
   {
     return new OnResolvedNoReturn<> (resolveNoReturn);
-  }
-
-  /**
-   * Specialized implementation of the OnResolved handler that does not have
-   * a return value.
-   *
-   * @param <T>         Value type
-   * @param <U>         Continuation value type
-   */
-  private static class OnResolvedNoReturn <T, U> extends OnResolved <T, U>
-  {
-    private final ResolveNoReturn <T> resolveNoReturn_;
-
-    private OnResolvedNoReturn (ResolveNoReturn <T> resolveNoReturn)
-    {
-      this.resolveNoReturn_ = resolveNoReturn;
-    }
-
-    @Override
-    @SuppressWarnings ("unchecked")
-    public Promise onResolved (T value)
-    {
-      this.resolveNoReturn_.resolveNoReturn (value);
-      return null;
-    }
   }
 
   /**
@@ -201,32 +86,6 @@ public class Promise <T>
 
     }
   });
-
-  public interface RejectNoReturn
-  {
-    void rejectNoReturn (Throwable reason);
-  }
-
-  /**
-   * Specialized implementation of the OnRejected handler that does not
-   * have a return value.
-   */
-  private static class OnRejectedNoReturn extends OnRejected
-  {
-    private final RejectNoReturn rejectNoReturn_;
-
-    private OnRejectedNoReturn (RejectNoReturn rejectNoReturn)
-    {
-      this.rejectNoReturn_ = rejectNoReturn;
-    }
-
-    @Override
-    public Promise onRejected (Throwable reason)
-    {
-      this.rejectNoReturn_.rejectNoReturn (reason);
-      return null;
-    }
-  }
 
   public enum Status
   {
@@ -287,12 +146,12 @@ public class Promise <T>
     final ContinuationPromise <?> cont;
 
     /// Handler for when the promise is execute.
-    final OnResolved <T, ?> onResolved;
+    final OnResolvedExecutor<T, ?> onResolved;
 
     /// Handler for when the promise is execute.
-    final OnRejected onRejected;
+    final OnRejectedExecutor onRejected;
 
-    PendingEntry (ContinuationPromise <?> cont, OnResolved <T, ?> onResolved, OnRejected onRejected)
+    PendingEntry (ContinuationPromise <?> cont, OnResolvedExecutor <T, ?> onResolved, OnRejectedExecutor onRejected)
     {
       this.cont = cont;
       this.onResolved = onResolved;
@@ -468,13 +327,76 @@ public class Promise <T>
   }
 
   /**
-   * Settle the promise.
+   * Add a chain to the promise.
    *
-   * @param onResolved          Handler called when execute.
+   * @param onResolved
+   * @param <U>
+   * @return
    */
   public <U> Promise <U> then (OnResolved <T, U> onResolved)
   {
+    if (onResolved == null)
+      throw new IllegalStateException ("The resolve handler cannot be null");
+
     return this.then (onResolved, null);
+  }
+
+  /**
+   * Add a chain to the promise.
+   *
+   * @param onResolved
+   * @param <U>
+   * @return
+   */
+  public <U> Promise <U> then (OnResolvedExecutor <T, U> onResolved)
+  {
+    if (onResolved == null)
+      throw new IllegalStateException ("The resolve handler cannot be null");
+
+    return this.then (onResolved, null);
+  }
+
+  /**
+   * Add a chain to the promise.
+   *
+   * @param onResolved
+   * @param onRejected
+   * @param <U>
+   * @return
+   */
+  public <U> Promise <U> then (OnResolved <T, U> onResolved, OnRejected onRejected)
+  {
+    return this.then (OnResolvedExecutor.wrapOrNull (onResolved), OnRejectedExecutor.wrapOrNull (onRejected));
+  }
+
+  /**
+   * Add an error handler to the chain.
+   *
+   * @param onRejected
+   * @param <U>
+   * @return
+   */
+  public <U> Promise <U> _catch (OnRejected onRejected)
+  {
+    if (onRejected == null)
+      throw new IllegalStateException ("The rejected handler cannot be null.");
+
+    return this.then (null, onRejected);
+  }
+
+  /**
+   * Add an error handler to the chain.
+   *
+   * @param onRejected
+   * @param <U>
+   * @return
+   */
+  public <U> Promise <U> _catch (OnRejectedExecutor onRejected)
+  {
+    if (onRejected == null)
+      throw new IllegalStateException ("The rejected handler cannot be null.");
+
+    return this.then (null, onRejected);
   }
 
   /**
@@ -484,7 +406,7 @@ public class Promise <T>
    * @param onRejected          Handler called when execute.
    */
   @SuppressWarnings ("unchecked")
-  public <U> Promise <U> then (final OnResolved <T, U> onResolved, final OnRejected onRejected)
+  public <U> Promise <U> then (OnResolvedExecutor <T, U> onResolved, OnRejectedExecutor onRejected)
   {
     final ContinuationPromise continuation = new ContinuationPromise<> ();
 
@@ -660,14 +582,6 @@ public class Promise <T>
     }
   }
 
-  public <U> Promise <U> _catch (OnRejected onRejected)
-  {
-    if (onRejected == null)
-      throw new IllegalStateException ("onRejected cannot be null");
-
-    return this.then (null, onRejected);
-  }
-
   /**
    * Create a Promise that is already execute.
    *
@@ -735,6 +649,7 @@ public class Promise <T>
 
         final OnResolved onResolved = new OnResolved ()
         {
+          @SuppressWarnings ("unchecked")
           @Override
           public Promise onResolved (Object value)
           {

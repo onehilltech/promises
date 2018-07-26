@@ -21,9 +21,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.NonNull;
 
-import java.util.concurrent.Executor;
-
-
 /**
  * Proxy that run the OnResolved handler on the UI thread.
  *
@@ -34,7 +31,7 @@ import java.util.concurrent.Executor;
  * This design make is so the caller does not experience any context switches if the
  * root promise starts on the UI thread, and the handler needs to run on the UI thread.
  */
-public class ResolvedOnUIThread <T, U> extends Promise.OnResolved <T, U>
+public final class ResolvedOnUIThread
 {
   /**
    * Factory method that supports using a lambda function. It also removes the need
@@ -45,81 +42,81 @@ public class ResolvedOnUIThread <T, U> extends Promise.OnResolved <T, U>
    * @param <U>               Parameter type of the next value
    * @return                  Promise.OnResolved object
    */
-  public static <T, U> Promise.OnResolved <T, U> onUiThread (@NonNull Promise.OnResolved <T, U> onResolved)
+  public static <T, U> OnResolvedExecutor<T, U> onUiThread (@NonNull OnResolved<T, U> onResolved)
   {
-    return new ResolvedOnUIThread<> (onResolved);
+    return new Executor <> (onResolved);
   }
 
-  /// The real OnResolved handler.
-  private final Promise.OnResolved <T, U> onResolved_;
-
-  /// Mock continuation promise.
-  private ContinuationPromise cont_ = new ContinuationPromise ();
-
-  /// The value of the settlement.
-  private T value_;
-
   /**
-   * Initializing constructor.
+   * Private implementation of the executor.
    *
-   * @param onResolved        The real handler
+   * @param <T>
+   * @param <U>
    */
-  private ResolvedOnUIThread (Promise.OnResolved <T, U> onResolved)
+  private static class Executor <T, U> extends OnResolvedExecutor <T, U>
   {
-    this.onResolved_ = onResolved;
-  }
+    /// Mock continuation promise.
+    private ContinuationPromise cont_ = new ContinuationPromise ();
 
-  @SuppressWarnings ("unchecked")
-  @Override
-  void execute (Executor executor, Object obj, ContinuationPromise continuation)
-  {
-    if (this.isUiThread ())
+    /// The value of the settlement.
+    private T value_;
+
+    /**
+     * Initializing constructor.
+     *
+     * @param onResolved        The real handler
+     */
+    Executor (OnResolved<T, U> onResolved)
     {
-      // We are already running on the UI thread. Let's just continue with the
-      // continuation promise so the original caller does not see any disruption.
-      T value = (T)obj;
-      this.execute (value, continuation);
+      super (onResolved);
     }
-    else
-    {
-      // Schedule the rejection handler to run on the UI thread.
-      this.value_ = (T)obj;
-      this.cont_ = continuation;
 
-      this.runOnUiThread ();
-    }
-  }
-
-  @Override
-  public Promise<U> onResolved (T value)
-  {
-    return this.onResolved_.onResolved (value);
-  }
-
-  private boolean isUiThread ()
-  {
-    return Looper.getMainLooper ().equals (Looper.myLooper ());
-  }
-
-  /**
-   * Run the handler on the UI thread.
-   */
-  private void runOnUiThread ()
-  {
-    Message message = uiHandler_.obtainMessage (0, this);
-    message.sendToTarget ();
-  }
-
-  /**
-   * Implementation of the Looper that runs the handler on the UI thread.
-   */
-  private static final Handler uiHandler_ = new Handler (Looper.getMainLooper ()) {
     @SuppressWarnings ("unchecked")
     @Override
-    public void handleMessage (Message msg)
+    void execute (java.util.concurrent.Executor executor, Object obj, ContinuationPromise continuation)
     {
-      ResolvedOnUIThread onUIThread = (ResolvedOnUIThread) msg.obj;
-      onUIThread.execute (onUIThread.value_, onUIThread.cont_);
+      if (this.isUiThread ())
+      {
+        // We are already running on the UI thread. Let's just continue with the
+        // continuation promise so the original caller does not see any disruption.
+        T value = (T)obj;
+        this.execute (value, continuation);
+      }
+      else
+      {
+        // Schedule the rejection handler to run on the UI thread.
+        this.value_ = (T)obj;
+        this.cont_ = continuation;
+
+        this.runOnUiThread ();
+      }
     }
-  };
+
+    private boolean isUiThread ()
+    {
+      return Looper.getMainLooper ().equals (Looper.myLooper ());
+    }
+
+    /**
+     * Run the handler on the UI thread.
+     */
+    private void runOnUiThread ()
+    {
+      Message message = uiHandler_.obtainMessage (0, this);
+      message.sendToTarget ();
+    }
+
+    /**
+     * Implementation of the Looper that runs the handler on the UI thread.
+     */
+    private static final Handler uiHandler_ = new Handler (Looper.getMainLooper ()) {
+      @SuppressWarnings ("unchecked")
+      @Override
+      public void handleMessage (Message msg)
+      {
+        Executor onUIThread = (Executor) msg.obj;
+        onUIThread.execute (onUIThread.value_, onUIThread.cont_);
+      }
+    };
+  }
 }

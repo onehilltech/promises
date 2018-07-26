@@ -33,7 +33,7 @@ import java.util.concurrent.Executor;
  * This design make is so the caller does not experience any context switches if the
  * root promise starts on the UI thread, and the handler needs to run on the UI thread.
  */
-public class RejectedOnUIThread extends Promise.OnRejected
+public class RejectedOnUIThread
 {
   /**
    * Factory method that supports using a lambda function. It also removes the need
@@ -42,79 +42,73 @@ public class RejectedOnUIThread extends Promise.OnRejected
    * @param onRejected      The real handler
    * @return                Promise.OnRejected object
    */
-  public static Promise.OnRejected onUiThread (@NonNull Promise.OnRejected onRejected)
+  public static OnRejectedExecutor onUiThread (@NonNull Promise.OnRejected onRejected)
   {
-    return new RejectedOnUIThread (onRejected);
+    return new Executor (onRejected);
   }
 
-  /// The real OnRejected handler.
-  private final Promise.OnRejected onRejected_;
-
-  /// Mock continuation promise.
-  private ContinuationPromise cont_;
-
-  /// The reason for the failure.
-  private Throwable reason_;
-
-  /**
-   * Initializing constructor.
-   *
-   * @param onRejected        The real object
-   */
-  private RejectedOnUIThread (Promise.OnRejected onRejected)
+  private static class Executor extends OnRejectedExecutor
   {
-    this.onRejected_ = onRejected;
-  }
+    /// Mock continuation promise.
+    private ContinuationPromise cont_;
 
-  @Override
-  void execute (Executor executor, final Throwable reason, final ContinuationPromise continuation)
-  {
-    if (this.isUiThread ())
+    /// The reason for the failure.
+    private Throwable reason_;
+
+    /**
+     * Initializing constructor.
+     *
+     * @param onRejected        The real object
+     */
+    private Executor (Promise.OnRejected onRejected)
     {
-      // We are already running on the UI thread. Let's just continue with the
-      // continuation promise so the original caller does not see any disruption.
-
-      this.execute (reason, continuation);
+      super (onRejected);
     }
-    else
-    {
-      // Schedule the rejection handler to run on the UI thread.
-      this.reason_ = reason;
-      this.cont_ = continuation;
 
-      this.runOnUiThread ();
-    }
-  }
-
-  private boolean isUiThread ()
-  {
-    return Looper.getMainLooper ().equals (Looper.myLooper ());
-  }
-
-  @Override
-  public Promise onRejected (Throwable reason)
-  {
-    return this.onRejected_.onRejected (reason);
-  }
-
-  /**
-   * Run the handler on the UI thread.
-   */
-  private void runOnUiThread ()
-  {
-    Message message = uiHandler_.obtainMessage (0, this);
-    message.sendToTarget ();
-  }
-
-  /**
-   * Implementation of the Looper that runs the handler on the UI thread.
-   */
-  private static final Handler uiHandler_ = new Handler (Looper.getMainLooper ()) {
     @Override
-    public void handleMessage (Message msg)
+    void execute (java.util.concurrent.Executor executor, final Throwable reason, final ContinuationPromise continuation)
     {
-      RejectedOnUIThread onUIThread = (RejectedOnUIThread) msg.obj;
-      onUIThread.execute (onUIThread.reason_, onUIThread.cont_);
+      if (this.isUiThread ())
+      {
+        // We are already running on the UI thread. Let's just continue with the
+        // continuation promise so the original caller does not see any disruption.
+
+        this.execute (reason, continuation);
+      }
+      else
+      {
+        // Schedule the rejection handler to run on the UI thread.
+        this.reason_ = reason;
+        this.cont_ = continuation;
+
+        this.runOnUiThread ();
+      }
     }
-  };
+
+    private boolean isUiThread ()
+    {
+      return Looper.getMainLooper ().equals (Looper.myLooper ());
+    }
+
+    /**
+     * Run the handler on the UI thread.
+     */
+    private void runOnUiThread ()
+    {
+      Message message = uiHandler_.obtainMessage (0, this);
+      message.sendToTarget ();
+    }
+
+    /**
+     * Implementation of the Looper that runs the handler on the UI thread.
+     */
+    private static final Handler uiHandler_ = new Handler (Looper.getMainLooper ()) {
+      @Override
+      public void handleMessage (Message msg)
+      {
+        Executor onUIThread = (Executor) msg.obj;
+        onUIThread.execute (onUIThread.reason_, onUIThread.cont_);
+      }
+    };
+  }
 }

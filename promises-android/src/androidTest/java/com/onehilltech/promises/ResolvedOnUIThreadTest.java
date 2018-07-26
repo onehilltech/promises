@@ -48,7 +48,7 @@ public class ResolvedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.resolve (10)
-             .then (onUiThread (resolved (new Promise.ResolveNoReturn<Integer> ()
+             .then (onUiThread (resolved (new ResolveNoReturn<Integer> ()
              {
                @Override
                public void resolveNoReturn (Integer value)
@@ -63,7 +63,7 @@ public class ResolvedOnUIThreadTest
                  }
                }
              })))
-             ._catch (onUiThread (rejected (new Promise.RejectNoReturn () {
+             ._catch (onUiThread (rejected (new RejectNoReturn () {
                @Override
                public void rejectNoReturn (Throwable reason)
                {
@@ -84,7 +84,7 @@ public class ResolvedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.resolve (10)
-             .then (onUiThread (resolved (new Promise.ResolveNoReturn<Integer> ()
+             .then (onUiThread (resolved (new ResolveNoReturn<Integer> ()
              {
                @Override
                public void resolveNoReturn (Integer value)
@@ -95,7 +95,7 @@ public class ResolvedOnUIThreadTest
                  complete_ = true;
                }
              })))
-             ._catch (onUiThread (rejected (new Promise.RejectNoReturn () {
+             ._catch (onUiThread (rejected (new RejectNoReturn () {
                @Override
                public void rejectNoReturn (Throwable reason)
                {

@@ -47,7 +47,7 @@ public class RejectedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (onUiThread (rejected (new Promise.RejectNoReturn ()
+             ._catch (onUiThread (rejected (new RejectNoReturn ()
              {
                @Override
                public void rejectNoReturn (Throwable reason)
@@ -76,7 +76,7 @@ public class RejectedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (onUiThread (rejected (new Promise.RejectNoReturn ()
+             ._catch (onUiThread (rejected (new RejectNoReturn ()
              {
                @Override
                public void rejectNoReturn (Throwable reason)
