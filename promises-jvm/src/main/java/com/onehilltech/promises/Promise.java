@@ -102,11 +102,12 @@ public class Promise <T>
     Cancelled
   }
 
+
   /// The execute value for the promise.
   private T value_;
 
   /// Current status for the promise.
-  private Status status_;
+  private Status status_ = Status.Pending;
 
   /// Future for the promise execution.
   private Future<?> future_;
@@ -135,6 +136,8 @@ public class Promise <T>
   private final ExecutorService executor_;
 
   private final String name_;
+
+  private final ArrayList <ContinuationPromise> continuations_ = new ArrayList<> ();
 
   /**
    * Link to a continuation promise that is waiting for its parent promise
@@ -303,14 +306,19 @@ public class Promise <T>
    */
   public boolean cancel (boolean mayInterruptIfRunning)
   {
-    if (this.status_ != Status.Pending)
-      return false;
+    boolean result = this.cancelThis (mayInterruptIfRunning);
+    result &= this.cancelContinuations (mayInterruptIfRunning);
 
+    return result;
+  }
+
+  private boolean cancelThis (boolean mayInterruptIfRunning)
+  {
     try
     {
       this.stateLock_.writeLock ().lock ();
 
-      if (this.status_ != Status.Pending)
+      if (this.status_ != Status.Pending || this.future_ == null)
         return false;
 
       boolean result = this.future_.cancel (mayInterruptIfRunning);
@@ -324,6 +332,19 @@ public class Promise <T>
     {
       this.stateLock_.writeLock ().unlock ();
     }
+  }
+
+  private boolean cancelContinuations (boolean mayInterruptIfRunning)
+  {
+    boolean result = true;
+
+    synchronized (this.continuations_)
+    {
+      for (ContinuationPromise continuation : this.continuations_)
+        result &= continuation.cancel (mayInterruptIfRunning);
+    }
+
+    return result;
   }
 
   /**
@@ -408,48 +429,77 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   public <U> Promise <U> then (OnResolvedExecutor <T, U> onResolved, OnRejectedExecutor onRejected)
   {
-    final ContinuationPromise continuation = new ContinuationPromise<> ();
+    ContinuationPromise continuation = this.createContinuationPromise ();
+
+    synchronized (this.continuations_)
+    {
+      this.continuations_.add (continuation);
+    }
+
+    Status status;
 
     try
     {
-      // Get the read lock so that t
       this.stateLock_.readLock ().lock ();
-
-      if (this.status_ == Status.Resolved)
-      {
-        // The promise is already execute. If the client has provided a handler,
-        // then we need to invoke it and determine how we are to proceed. Otherwise,
-        // we need to continue down the chain with a new start (i.e., a null value).
-        if (onResolved != null)
-          onResolved.execute (this.executor_, this.value_, continuation);
-        else
-          continuation.continueWithNull ();
-      }
-      else if (this.status_ == Status.Rejected)
-      {
-        // We are handling the rejection as this level. Either we are going to handle
-        // the rejection as this level via a onRejected handler, or we are going to
-        // pass the rejection to the next level.
-        if (onRejected != null)
-          onRejected.execute (this.executor_, this.rejection_, continuation);
-        else
-          continuation.continueWith (this.rejection_);
-      }
-      else if (this.status_ == Status.Pending)
-      {
-        // The promise is still pending. We need to add the execute and execute
-        // handlers to the waiting list along with the continuation promise returned
-        // from this call. This ensure the promise from the resolve/execute handlers
-        // is passed to the correct continuation promise.
-        this.pendingEntries_.add (new PendingEntry<> (continuation, onResolved, onRejected));
-      }
-
-      return continuation;
+      status = this.status_;
     }
     finally
     {
       this.stateLock_.readLock ().unlock ();
     }
+
+    switch (status)
+    {
+      case Pending:
+        // The promise is still pending. We need to add the execute and execute
+        // handlers to the waiting list along with the continuation promise returned
+        // from this call. This ensure the promise from the resolve/execute handlers
+        // is passed to the correct continuation promise.
+
+        this.pendingEntries_.add (new PendingEntry<> (continuation, onResolved, onRejected));
+        break;
+
+      case Resolved:
+        // The promise is already execute. If the client has provided a handler,
+        // then we need to invoke it and determine how we are to proceed. Otherwise,
+        // we need to continue down the chain with a new start (i.e., a null value).
+
+        if (onResolved != null)
+          onResolved.execute (this.executor_, this.value_, continuation);
+        else
+          continuation.continueWithNull ();
+
+        break;
+
+      case Rejected:
+        // We are handling the rejection as this level. Either we are going to handle
+        // the rejection as this level via a onRejected handler, or we are going to
+        // pass the rejection to the next level.
+
+        if (onRejected != null)
+          onRejected.execute (this.executor_, this.rejection_, continuation);
+        else
+          continuation.continueWith (this.rejection_);
+
+        break;
+
+      case Cancelled:
+        // This promise is cancel. We need to propagate the down the chain.
+        continuation.cancel ();
+        break;
+    }
+
+    return continuation;
+  }
+
+  /**
+   * Create a new continuation promise.
+   *
+   * @return
+   */
+  protected ContinuationPromise createContinuationPromise ()
+  {
+    return new ContinuationPromise ();
   }
 
   /**
