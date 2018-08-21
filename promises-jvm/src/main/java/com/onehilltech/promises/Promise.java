@@ -345,16 +345,22 @@ public class Promise<T> {
         return this.then(OnResolvedExecutor.wrapOrNull(onResolved), OnRejectedExecutor.wrapOrNull(onRejected));
     }
 
-    public <U> Promise<U> always(OnAlways<U> onAlways) {
-        return this.then((OnResolvedExecutor<T, U>) OnResolvedExecutor.wrapOrNull(
-                (v) -> {
-                    onAlways.OnAlways();
-                    return Promise.resolve(v);
-                }),
-                OnRejectedExecutor.wrapOrNull((e) -> {
-                    onAlways.OnAlways();
-                    return Promise.reject(e);
-                })
+    public <U> Promise<U> always(final OnAlways<U> onAlways) {
+        return this.then(
+                new OnResolved() {
+                     @Override
+                     public Promise onResolved(Object value) {
+                         onAlways.OnAlways();
+                         return Promise.resolve(value);
+                     }
+                 },
+                new OnRejected() {
+                     @Override
+                     public Promise onRejected(Throwable reason) {
+                         onAlways.OnAlways();
+                         return Promise.reject(reason);
+                     }
+                 }
         );
     }
 

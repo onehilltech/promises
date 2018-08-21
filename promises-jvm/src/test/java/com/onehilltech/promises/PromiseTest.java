@@ -26,9 +26,7 @@ public class PromiseTest {
     @Test
     public void testSynchronousGetValueSuccess() {
         int expected = 123;
-        Promise<Integer> promise = new Promise < > (settlement -> {
-            settlement.resolve(expected);
-        });
+        Promise<Integer> promise = Promise.resolve(123);
         try {
             int value = promise.getValue();
             Assert.assertEquals(expected, value);
@@ -40,9 +38,7 @@ public class PromiseTest {
     @Test
     public void testSynchronousGetValueFail() {
         String expected = "getValue should throw an exception";
-        Promise<Integer> promise = new Promise < > (settlement -> {
-            settlement.reject(new Exception(expected));
-        });
+        Promise<Integer> promise = Promise.reject(new Exception(expected));
         try {
             int value = promise.getValue();
             Assert.fail();
@@ -55,16 +51,16 @@ public class PromiseTest {
     public void testAlwaysSuccess() throws Exception {
         synchronized (this.lock_) {
             Promise<Integer> p = Promise.resolve(7);
-
-            p.always(() -> {
-                synchronized (lock_) {
-                    isComplete_ = true;
-                    lock_.notify();
+            p.always(new OnAlways<Integer>() {
+                @Override
+                public void OnAlways() {
+                    synchronized (lock_) {
+                        isComplete_ = true;
+                        lock_.notify();
+                    }
                 }
             });
-
             this.lock_.wait(5000);
-
             Assert.assertTrue(this.isComplete_);
         }
     }
@@ -74,10 +70,13 @@ public class PromiseTest {
         synchronized (this.lock_) {
             Promise<Integer> p = Promise.resolve(7);
 
-            p.always(() -> {
-                synchronized (lock_) {
-                    isComplete_ = true;
-                    lock_.notify();
+            p.always(new OnAlways<Integer>() {
+                @Override
+                public void OnAlways() {
+                    synchronized (lock_) {
+                        isComplete_ = true;
+                        lock_.notify();
+                    }
                 }
             });
 
