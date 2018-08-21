@@ -255,6 +255,12 @@ public class Promise<T> {
         return this.getStatus() == Status.Rejected;
     }
 
+    /**
+     * Gets the current value of the promise. Waits if the promise is still pending.
+     * Important this method will hang.
+     * @throws Throwable when the promise is rejected.
+     * @return
+     */
     public T getValue() throws Throwable {
         while (isPending()) {
             try {
@@ -345,6 +351,13 @@ public class Promise<T> {
         return this.then(OnResolvedExecutor.wrapOrNull(onResolved), OnRejectedExecutor.wrapOrNull(onRejected));
     }
 
+    /**
+     * Always will always run whether the promise is resolved or rejected.
+     *
+     * @param onAlways
+     * @param <U>
+     * @return
+     */
     public <U> Promise<U> always(final OnAlways<U> onAlways) {
         return this.then(
                 new OnResolved() {
