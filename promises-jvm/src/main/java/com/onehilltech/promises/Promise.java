@@ -345,6 +345,19 @@ public class Promise<T> {
         return this.then(OnResolvedExecutor.wrapOrNull(onResolved), OnRejectedExecutor.wrapOrNull(onRejected));
     }
 
+    public <U> Promise<U> always(OnAlways<U> onAlways) {
+        return this.then((OnResolvedExecutor<T, U>) OnResolvedExecutor.wrapOrNull(
+                (v) -> {
+                    onAlways.OnAlways();
+                    return Promise.resolve(v);
+                }),
+                OnRejectedExecutor.wrapOrNull((e) -> {
+                    onAlways.OnAlways();
+                    return Promise.reject(e);
+                })
+        );
+    }
+
     /**
      * Add an error handler to the chain.
      *

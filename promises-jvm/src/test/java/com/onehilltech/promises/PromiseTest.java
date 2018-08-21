@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.onehilltech.promises.Promise.ignoreReason;
 import static com.onehilltech.promises.Promise.rejected;
@@ -47,6 +48,42 @@ public class PromiseTest {
             Assert.fail();
         } catch (Throwable throwable) {
             Assert.assertEquals(throwable.getMessage(), expected);
+        }
+    }
+
+    @Test
+    public void testAlwaysSuccess() throws Exception {
+        synchronized (this.lock_) {
+            Promise<Integer> p = Promise.resolve(7);
+
+            p.always(() -> {
+                synchronized (lock_) {
+                    isComplete_ = true;
+                    lock_.notify();
+                }
+            });
+
+            this.lock_.wait(5000);
+
+            Assert.assertTrue(this.isComplete_);
+        }
+    }
+
+    @Test
+    public void testAlwaysFail() throws Exception {
+        synchronized (this.lock_) {
+            Promise<Integer> p = Promise.resolve(7);
+
+            p.always(() -> {
+                synchronized (lock_) {
+                    isComplete_ = true;
+                    lock_.notify();
+                }
+            });
+
+            this.lock_.wait(5000);
+
+            Assert.assertTrue(this.isComplete_);
         }
     }
 
