@@ -187,9 +187,9 @@ Promise.resolve (5)
        ._catch (Promise.ignoreReason);
 ```
 
-In the example above, we must point our several things. First, execution continues
+In the example above, we must point out several things. Firstly, execution continues
 after the first `_catch` if any of the preceding promises is rejected. If none of
-the promises are rejected, then the first `_catch` is skipped. Second, we are using
+the promises are rejected, then the first `_catch` is skipped. Secondly, we are using
 Java method references (i.e., `this::doSomethingElse`), which improves the readability
 of the code, and reduces verbosity. Lastly, `Promise.ignoreReason` is a special 
 handler that will catch the rejection and ignore the reason. This way, you do not have

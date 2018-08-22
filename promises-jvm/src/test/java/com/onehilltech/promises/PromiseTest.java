@@ -70,7 +70,17 @@ public class PromiseTest {
         synchronized (this.lock_) {
             Promise<Integer> p = Promise.resolve(7);
 
-            p.always(new OnAlways<Integer>() {
+            p.then(new OnResolved<Integer, Integer>() {
+                @Override
+                public Promise onResolved(Integer value) {
+                    return Promise.resolve(value);
+                }
+            })._catch(new Promise.OnRejected() {
+                @Override
+                public Promise onRejected(Throwable reason) {
+                    return null;
+                }
+            }).always(new OnAlways<Integer>() {
                 @Override
                 public void OnAlways() {
                     synchronized (lock_) {
@@ -653,7 +663,7 @@ public class PromiseTest {
                     .then(resolved(new ResolveNoReturn<Object>() {
                         @Override
                         public void resolveNoReturn(Object value) {
-                            Assert.assertNull(value);
+                            Assert.assertEquals(50, value);
 
                             isComplete_ = true;
 
@@ -795,7 +805,7 @@ public class PromiseTest {
                     .then(resolved(new ResolveNoReturn<Object>() {
                         @Override
                         public void resolveNoReturn(Object value) {
-                            Assert.assertNull(value);
+                            Assert.assertEquals(5, value);
 
                             isComplete_ = true;
 

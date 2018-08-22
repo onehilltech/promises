@@ -104,6 +104,9 @@ public class Promise<T> {
     /// The execute value for the promise.
     private Throwable rejection_;
 
+    /// Lock used when we get the value.
+    private final Object lock_ = new Object();
+
     private final ReentrantReadWriteLock stateLock_ = new ReentrantReadWriteLock();
 
     private static class PromiseThreadFactory implements ThreadFactory {
@@ -255,18 +258,39 @@ public class Promise<T> {
         return this.getStatus() == Status.Rejected;
     }
 
+
     /**
      * Gets the current value of the promise. Waits if the promise is still pending.
-     * Important this method will hang.
+     * Important this method will hang. It will not timeout
      * @throws Throwable when the promise is rejected.
      * @return
      */
     public T getValue() throws Throwable {
-        while (isPending()) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        return this.getValue(0);
+    }
+
+
+    /**
+     * Gets the current value of the promise. Waits if the promise is still pending.
+     * Important this method will hang.
+     * @throws Throwable when the promise is rejected.
+     * @param  timeout the maximum time to wait in milliseconds.
+     * @return
+     */
+    public T getValue(int timeout) throws Throwable {
+        synchronized (this.lock_) {
+            this.always(new OnAlways<T>() {
+                @Override
+                public void OnAlways() {
+                    synchronized (lock_) {
+                        lock_.notify();
+                    }
+                }
+            });
+            if(timeout == 0) {
+                this.lock_.wait();
+            } else {
+                this.lock_.wait(timeout);
             }
         }
         if(this.rejection_ != null) {
@@ -322,21 +346,12 @@ public class Promise<T> {
         if (onResolved == null)
             throw new IllegalStateException("The resolve handler cannot be null");
 
-        return this.then(onResolved, null);
-    }
-
-    /**
-     * Add a chain to the promise.
-     *
-     * @param onResolved
-     * @param <U>
-     * @return
-     */
-    public <U> Promise<U> then(OnResolvedExecutor<T, U> onResolved) {
-        if (onResolved == null)
-            throw new IllegalStateException("The resolve handler cannot be null");
-
-        return this.then(onResolved, null);
+        return this.then(onResolved, new OnRejected() {
+            @Override
+            public Promise onRejected(Throwable reason) {
+                return Promise.reject(reason);
+            }
+        });
     }
 
     /**
@@ -388,21 +403,12 @@ public class Promise<T> {
         if (onRejected == null)
             throw new IllegalStateException("The rejected handler cannot be null.");
 
-        return this.then(null, onRejected);
-    }
-
-    /**
-     * Add an error handler to the chain.
-     *
-     * @param onRejected
-     * @param <U>
-     * @return
-     */
-    public <U> Promise<U> _catch(OnRejectedExecutor onRejected) {
-        if (onRejected == null)
-            throw new IllegalStateException("The rejected handler cannot be null.");
-
-        return this.then(null, onRejected);
+        return this.then(new OnResolved() {
+            @Override
+            public Promise onResolved(Object value) {
+                return Promise.resolve(value);
+            }
+        }, onRejected);
     }
 
     /**
