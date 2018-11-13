@@ -16,7 +16,7 @@ android {
         versionName = project.property('build.version')
 
         testApplicationId project.property('android.testApplicationId')
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
     buildTypes {
@@ -42,11 +42,11 @@ android {
 }
 
 dependencies {
-    compile project (':promises-jvm')
-    compile 'com.android.support:support-annotations:27.1.1'
+    api project (':promises-jvm')
+    implementation 'androidx.annotation:annotation:1.0.0'
 
-    androidTestCompile 'com.android.support:support-annotations:27.1.1'
-    androidTestCompile 'com.android.support.test:runner:1.0.2'
-    androidTestCompile 'com.android.support.test:rules:1.0.2'
-    androidTestCompile 'com.android.support.test.espresso:espresso-core:3.0.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.0.0'
+    androidTestImplementation 'androidx.test:rules:1.1.0'
+
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0'
 }

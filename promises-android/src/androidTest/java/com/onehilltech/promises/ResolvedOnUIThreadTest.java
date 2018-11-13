@@ -17,13 +17,15 @@
 package com.onehilltech.promises;
 
 import android.os.Looper;
-import android.support.test.annotation.UiThreadTest;
-import android.support.test.runner.AndroidJUnit4;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+
+import androidx.test.annotation.UiThreadTest;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import static com.onehilltech.promises.Promise.resolved;
 import static com.onehilltech.promises.Promise.rejected;

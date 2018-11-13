@@ -19,9 +19,8 @@ package com.onehilltech.promises;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.support.annotation.NonNull;
 
-import java.util.concurrent.Executor;
+import androidx.annotation.NonNull;
 
 /**
  * Proxy that run the OnRejected handler on the UI thread.

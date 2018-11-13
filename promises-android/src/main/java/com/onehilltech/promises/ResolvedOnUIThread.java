@@ -19,7 +19,8 @@ package com.onehilltech.promises;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
 
 /**
  * Proxy that run the OnResolved handler on the UI thread.
