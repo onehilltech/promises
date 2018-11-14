@@ -197,7 +197,7 @@ to write a bunch of empty handlers like the first `_catch`.
 
 ### Await
 
-JavaScript introduce a concept called async/await for serial execution of promises. The
+JavaScript introduced a concept called async/await for serial execution of promises. The
 main idea the caller of `await` blocks until the promises is settled. The advantage of this
 approach is it makes promise code more readable because it removes promise chaining. We
 provide a similar with this library, and it is simple to use. Below is example code that
