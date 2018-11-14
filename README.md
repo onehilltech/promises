@@ -195,6 +195,34 @@ of the code, and reduces verbosity. Lastly, `Promise.ignoreReason` is a special
 handler that will catch the rejection and ignore the reason. This way, you do not have
 to write a bunch of empty handlers like the first `_catch`.
 
+### Await
+
+JavaScript introduce a concept called async/await for serial execution of promises. The
+main idea the caller of `await` blocks until the promises is settled. The advantage of this
+approach is it makes promise code more readable because it removes promise chaining. We
+provide a similar with this library, and it is simple to use. Below is example code that
+uses the `await` function to serialize promise execution.
+
+```java
+import static com.onehilltech.promises.Promise.await;
+
+// ....
+
+try
+{
+  int result = await (Promise.resolve (5));
+}
+catch (Exception e)
+{
+  
+}
+```
+
+The `await` function takes a `Promise`. The caller of the `await` function will block
+until the promise is settled (i.e., resolved or rejected). If the promise is resolved,
+it will return the resolved value. If the promise is rejected, it will throw the reason
+for rejection.
+
 ### Promise.all
 
 The library implements `Promise.all`, which is resolved if **all** promises are resolved 
