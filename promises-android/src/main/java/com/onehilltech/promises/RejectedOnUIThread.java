@@ -41,7 +41,7 @@ public class RejectedOnUIThread
    * @param onRejected      The real handler
    * @return                Promise.OnRejected object
    */
-  public static OnRejectedExecutor onUiThread (@NonNull Promise.OnRejected onRejected)
+  public static OnRejectedExecutor onUiThread (@NonNull OnRejected onRejected)
   {
     return new Executor (onRejected);
   }
@@ -59,7 +59,7 @@ public class RejectedOnUIThread
      *
      * @param onRejected        The real object
      */
-    private Executor (Promise.OnRejected onRejected)
+    private Executor (OnRejected onRejected)
     {
       super (onRejected);
     }

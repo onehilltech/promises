@@ -9,14 +9,14 @@ import java.util.concurrent.Executor;
  */
 public class OnRejectedExecutor
 {
-  private final Promise.OnRejected onRejected_;
+  private final OnRejected onRejected_;
 
-  static OnRejectedExecutor wrapOrNull (Promise.OnRejected onRejected)
+  static OnRejectedExecutor wrapOrNull (OnRejected onRejected)
   {
     return onRejected != null ? new OnRejectedExecutor (onRejected) : null;
   }
 
-  OnRejectedExecutor (Promise.OnRejected onRejected)
+  OnRejectedExecutor (OnRejected onRejected)
   {
     this.onRejected_ = onRejected;
   }

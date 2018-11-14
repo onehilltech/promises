@@ -18,5 +18,6 @@ package com.onehilltech.promises;
 
 public interface PromiseExecutor <T>
 {
-  void execute (Promise.Settlement<T> settlement);
+  void execute (Promise.Settlement<T> settlement)
+      throws Throwable;
 }

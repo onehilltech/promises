@@ -4,7 +4,7 @@ package com.onehilltech.promises;
  * Specialized implementation of the OnRejected handler that does not
  * have a return value.
  */
-class OnRejectedNoReturn implements Promise.OnRejected
+class OnRejectedNoReturn implements OnRejected
 {
   private final RejectNoReturn rejectNoReturn_;
 

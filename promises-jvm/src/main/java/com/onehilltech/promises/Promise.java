@@ -53,11 +53,6 @@ public class Promise <T>
     void reject (Throwable reason);
   }
 
-  public interface OnRejected
-  {
-    Promise onRejected (Throwable reason);
-  }
-
   public static <T, U> OnResolved <T, U> resolved (ResolveNoReturn <T> resolveNoReturn)
   {
     return new OnResolvedNoReturn<> (resolveNoReturn);
@@ -102,7 +97,6 @@ public class Promise <T>
     Cancelled
   }
 
-
   /// The execute value for the promise.
   private T value_;
 
@@ -139,6 +133,15 @@ public class Promise <T>
 
   private final ArrayList <ContinuationPromise> continuations_ = new ArrayList<> ();
 
+  public static <T> T await (Promise <T> promise)
+      throws Throwable
+  {
+    AwaitHandler <T> handler = new AwaitHandler<> ();
+    promise.then (handler)._catch (handler);
+
+    return handler.await ();
+  }
+
   /**
    * Link to a continuation promise that is waiting for its parent promise
    * to reach a settlement.
@@ -170,7 +173,17 @@ public class Promise <T>
     void rejected (Executor executor, Throwable reason)
     {
       if (this.onRejected != null)
+      {
+        // We have found the first rejection handler. Let's stop here an pass the
+        // rejection to the handler.
         this.onRejected.execute (executor, reason, this.cont);
+      }
+      else if (this.onResolved != null)
+      {
+        // There was not rejection handler defined a the level. Let's continue
+        // down the chain until we find the first one to handle this exception.
+        this.onResolved.execute (executor, reason, this.cont);
+      }
     }
   }
 
@@ -542,7 +555,7 @@ public class Promise <T>
         }
       });
     }
-    catch (Exception e)
+    catch (Throwable e)
     {
       this.onReject (e);
     }
@@ -558,7 +571,7 @@ public class Promise <T>
 
     try
     {
-      // Get a write lock to the state since we are updating it. We do not want
+      // Get a write lock_ to the state since we are updating it. We do not want
       // other threads reading the state until we are done.
       this.stateLock_.writeLock ().lock ();
 
@@ -603,7 +616,7 @@ public class Promise <T>
 
     try
     {
-      // Get a write lock to the state since we are updating it. We do not want
+      // Get a write lock_ to the state since we are updating it. We do not want
       // other threads reading the state until we are done.
       this.stateLock_.writeLock ().lock ();
 
@@ -777,7 +790,7 @@ public class Promise <T>
               {
                 settlement.resolve (value);
               }
-              catch (Exception e)
+              catch (Throwable e)
               {
                 // Do nothing since we are not the first to finish
               }
@@ -798,7 +811,7 @@ public class Promise <T>
               {
                 settlement.reject (reason);
               }
-              catch (Exception e)
+              catch (Throwable e)
               {
                 // Do nothing since we are not the first to finish
               }

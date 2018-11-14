@@ -10,6 +10,7 @@ import java.util.List;
 import static com.onehilltech.promises.Promise.ignoreReason;
 import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
+import static com.onehilltech.promises.Promise.await;
 
 public class PromiseTest
 {
@@ -611,7 +612,7 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (new Promise.OnRejected () {
+             ._catch (new OnRejected () {
                @Override
                public Promise onRejected (Throwable reason)
                {
@@ -952,30 +953,25 @@ public class PromiseTest
     }
   }
 
-  public void testNestedPromise ()
-      throws Exception
+  @Test
+  public void testAwaitResolved ()
+      throws Throwable
   {
-    synchronized (this.lock_)
+    int result = await (this.makeSimplePromise (5, 2000));
+    Assert.assertEquals (result, 5);
+  }
+
+  @Test
+  public void testAwaitRejected ()
+  {
+    try
     {
-      this.makeSimplePromise (25)
-          .then (new OnResolved<Integer, Integer> () {
-            @Override
-            public Promise<Integer> onResolved (final Integer value)
-            {
-              return new Promise<> (new PromiseExecutor<Integer> ()
-              {
-                @Override
-                public void execute (Promise.Settlement<Integer> settlement)
-                {
-                  settlement.resolve (value);
-                }
-              });
-            }
-          });
-
-      this.lock_.wait (10000);
-
-      Assert.assertTrue (this.isComplete_);
+      await (this.makeSimplePromise (new IllegalStateException ("REJECTED"), 2000));
+      Assert.fail ("The promise should have been rejected");
+    }
+    catch (Throwable e)
+    {
+      Assert.assertEquals ("REJECTED", e.getMessage ());
     }
   }
 
@@ -987,6 +983,34 @@ public class PromiseTest
       public void execute (Promise.Settlement<Integer> settlement)
       {
         settlement.resolve (value);
+      }
+    });
+  }
+
+  private Promise <Integer> makeSimplePromise (final int value, final long sleep)
+  {
+    return new Promise<> (new PromiseExecutor<Integer> ()
+    {
+      @Override
+      public void execute (Promise.Settlement<Integer> settlement)
+          throws Throwable
+      {
+        Thread.sleep (sleep);
+        settlement.resolve (value);
+      }
+    });
+  }
+
+  private Promise <Integer> makeSimplePromise (final Throwable reason, final long sleep)
+  {
+    return new Promise<> (new PromiseExecutor<Integer> ()
+    {
+      @Override
+      public void execute (Promise.Settlement<Integer> settlement)
+          throws Exception
+      {
+        Thread.sleep (sleep);
+        settlement.reject (reason);
       }
     });
   }

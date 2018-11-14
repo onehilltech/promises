@@ -8,5 +8,5 @@ public interface OnResolved <T, U>
    * @param value The execute value
    * @return Optional promise
    */
-  Promise<U> onResolved (T value);
+  Promise<U> onResolved (T value) throws Throwable;
 }

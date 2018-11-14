@@ -40,6 +40,18 @@ public class OnResolvedExecutor <T, U>
     });
   }
 
+  void execute (Executor executor, final Throwable reason, final ContinuationPromise continuation)
+  {
+    executor.execute (new Runnable ()
+    {
+      @Override
+      public void run ()
+      {
+        continuation.continueWith (reason);
+      }
+    });
+  }
+
   @SuppressWarnings ("unchecked")
   void execute (T value, ContinuationPromise continuation)
   {
@@ -48,7 +60,7 @@ public class OnResolvedExecutor <T, U>
       Promise promise = this.onResolved_.onResolved (value);
       continuation.continueWith (promise);
     }
-    catch (Exception e)
+    catch (Throwable e)
     {
       continuation.continueWith (e);
     }
