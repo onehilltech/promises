@@ -26,10 +26,10 @@ buildscript {
 }
 
 dependencies {
-  # for JVM-only projects
+  // for JVM-only projects
   compile 'com.onehilltech.promises:promises-jvm:x.y.z'
   
-  # for Android projects (includes JVM automatically)
+  // for Android projects (includes JVM automatically)
   implementation 'com.onehilltech.promises:promises-android:x.y.z'
 }
 ```
