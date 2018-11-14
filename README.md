@@ -18,7 +18,7 @@ Promise library for JVM and Android
 
 ### Gradle
 
-```
+```groovy
 buildscript {
   repositories {
     maven { url "https://jitpack.io" }
@@ -27,10 +27,10 @@ buildscript {
 
 dependencies {
   # for JVM-only projects
-  compile com.onehilltech.promises:promises-jvm:x.y.z
+  compile 'com.onehilltech.promises:promises-jvm:x.y.z'
   
   # for Android projects (includes JVM automatically)
-  compile com.onehilltech.promises:promises-android:x.y.z
+  implementation 'com.onehilltech.promises:promises-android:x.y.z'
 }
 ```
 
