@@ -32,29 +32,42 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * @class Promise
- *
  * A promise is an object which can be returned synchronously from an asynchronous
  * function.
  *
- * @param <T>
+ * @param <T>       The resolved value type.
  */
 public class Promise <T>
 {
   /**
-   * @interface Settlement
-   *
    * Settlement interface used to either resolve or reject a promise.
    *
    * @param <T>
    */
   public interface Settlement <T>
   {
+    /**
+     * Resolve the promise
+     *
+     * @param value       The resolved value.
+     */
     void resolve (T value);
 
+    /**
+     * Reject the promise.
+     *
+     * @param reason      The reason for rejection.
+     */
     void reject (Throwable reason);
   }
 
+  /**
+   * Factory method that creates an OnResolved handler that does not return a Promise
+   * value to be used in the chain.
+   * *
+   * @param resolveNoReturn     The resolve function.
+   * @return                    OnResolved handler
+   */
   public static <T, U> OnResolved <T, U> resolved (ResolveNoReturn <T> resolveNoReturn)
   {
     return new OnResolvedNoReturn<> (resolveNoReturn);
@@ -64,8 +77,8 @@ public class Promise <T>
    * Factory method that creates an OnRejected handler that does not return a Promise
    * value to be used in the chain.
    *
-   * @param rejectNoReturn        RejectNoReturn instance
-   * @return
+   * @param rejectNoReturn      RejectNoReturn instance
+   * @return                    OnRejected handler
    */
   public static OnRejected rejected (RejectNoReturn rejectNoReturn)
   {
@@ -75,14 +88,7 @@ public class Promise <T>
   /**
    * Helper OnRejected handler for ignoring the reason a Promise is execute.
    */
-  public static final OnRejected ignoreReason = rejected (new RejectNoReturn ()
-  {
-    @Override
-    public void rejectNoReturn (Throwable reason)
-    {
-
-    }
-  });
+  public static final OnRejected ignoreReason = rejected (reason -> {});
 
   public enum Status
   {
@@ -113,6 +119,16 @@ public class Promise <T>
 
   private final ReentrantReadWriteLock stateLock_ = new ReentrantReadWriteLock ();
 
+  T getValue ()
+  {
+    return this.value_;
+  }
+
+  Throwable getRejection ()
+  {
+    return this.rejection_;
+  }
+
   private static class PromiseThreadFactory implements ThreadFactory
   {
     private AtomicInteger counter_ = new AtomicInteger (0);
@@ -133,7 +149,7 @@ public class Promise <T>
 
   private final String name_;
 
-  private final ArrayList <ContinuationPromise> continuations_ = new ArrayList<> ();
+  private final ArrayList <ContinuationPromise <?>> continuations_ = new ArrayList<> ();
 
   /// @{ Await Methods
 
@@ -221,18 +237,18 @@ public class Promise <T>
    * Link to a continuation promise that is waiting for its parent promise
    * to reach a settlement.
    */
-  private static class PendingEntry <T>
+  private static class PendingEntry <T, U>
   {
     /// Next promise in the chain.
-    final ContinuationPromise <?> cont;
+    final ContinuationPromise <U> cont;
 
     /// Handler for when the promise is execute.
-    final OnResolvedExecutor<T, ?> onResolved;
+    final OnResolvedExecutor<T, U> onResolved;
 
     /// Handler for when the promise is execute.
-    final OnRejectedExecutor onRejected;
+    final OnRejectedExecutor<U> onRejected;
 
-    PendingEntry (ContinuationPromise <?> cont, OnResolvedExecutor <T, ?> onResolved, OnRejectedExecutor onRejected)
+    PendingEntry (ContinuationPromise <U> cont, OnResolvedExecutor <T, U> onResolved, OnRejectedExecutor <U> onRejected)
     {
       this.cont = cont;
       this.onResolved = onResolved;
@@ -262,7 +278,7 @@ public class Promise <T>
     }
   }
 
-  private final ArrayList <PendingEntry <T>> pendingEntries_ = new ArrayList<> ();
+  private final ArrayList <PendingEntry <T, ?>> pendingEntries_ = new ArrayList<> ();
 
   /**
    * The executor for the Promise.
@@ -286,17 +302,17 @@ public class Promise <T>
   }
 
   /**
-   * Create a Promise that is execute.
+   * Create a resolved promise.
    *
-   * @param resolve
+   * @param value
    */
-  private Promise (T resolve)
+  private Promise (T value)
   {
-    this (null, null, Status.Resolved, resolve, null);
+    this (null, null, Status.Resolved, value, null);
   }
 
   /**
-   * Create a Promise that is execute.
+   * Create a rejected promise.
    *
    * @param reason
    */
@@ -310,14 +326,14 @@ public class Promise <T>
    *
    * @param name            Name of the promise
    * @param impl            Promise executor implementation
-   * @param resolve         Resolved value
+   * @param value           Resolved value
    * @param reason          Rejected value
    */
-  private Promise (String name, PromiseExecutor<T> impl, Status status, T resolve, Throwable reason)
+  private Promise (String name, PromiseExecutor<T> impl, Status status, T value, Throwable reason)
   {
     this.name_ = name;
     this.impl_ = impl;
-    this.value_ = resolve;
+    this.value_ = value;
     this.rejection_ = reason;
     this.status_ = status;
     this.executor_ = DEFAULT_EXECUTOR;
@@ -482,7 +498,6 @@ public class Promise <T>
    * Add an error handler to the chain.
    *
    * @param onRejected
-   * @param <U>
    * @return
    */
   public <U> Promise <U> _catch (OnRejected onRejected)
@@ -497,7 +512,6 @@ public class Promise <T>
    * Add an error handler to the chain.
    *
    * @param onRejected
-   * @param <U>
    * @return
    */
   public <U> Promise <U> _catch (OnRejectedExecutor onRejected)
@@ -515,9 +529,9 @@ public class Promise <T>
    * @param onRejected          Handler called when execute.
    */
   @SuppressWarnings ("unchecked")
-  public <U> Promise <U> then (OnResolvedExecutor <T, U> onResolved, OnRejectedExecutor onRejected)
+  public <U> Promise <U> then (OnResolvedExecutor <T, U> onResolved, OnRejectedExecutor <U> onRejected)
   {
-    ContinuationPromise continuation = this.createContinuationPromise ();
+    ContinuationPromise <U> continuation = this.createContinuationPromise ();
 
     synchronized (this.continuations_)
     {
@@ -544,7 +558,7 @@ public class Promise <T>
         // from this call. This ensure the promise from the resolve/execute handlers
         // is passed to the correct continuation promise.
 
-        this.pendingEntries_.add (new PendingEntry<> (continuation, onResolved, onRejected));
+        this.pendingEntries_.add (new PendingEntry< > (continuation, onResolved, onRejected));
         break;
 
       case Resolved:
@@ -585,9 +599,9 @@ public class Promise <T>
    *
    * @return
    */
-  protected ContinuationPromise createContinuationPromise ()
+  protected <U> ContinuationPromise <U> createContinuationPromise ()
   {
-    return new ContinuationPromise ();
+    return new ContinuationPromise <> ();
   }
 
   /**
@@ -595,14 +609,7 @@ public class Promise <T>
    */
   private void settlePromise ()
   {
-    this.future_ = this.executor_.submit (new Runnable ()
-    {
-      @Override
-      public void run ()
-      {
-        settlePromiseImpl ();
-      }
-    });
+    this.future_ = this.executor_.submit (this::settlePromiseImpl);
   }
 
   /**
@@ -668,7 +675,7 @@ public class Promise <T>
       // Let's each of pending entry know we have execute the promise. Afterwards,
       // we need to clear the pending entry list.
 
-      for (PendingEntry<T> entry : this.pendingEntries_)
+      for (PendingEntry<T, ?> entry : this.pendingEntries_)
         entry.resolved (this.executor_, value);
 
       // Clear the list of pending entries.
@@ -712,7 +719,7 @@ public class Promise <T>
       // Let's each of pending entry know we have execute the promise. Afterwards,
       // we need to clear the pending entry list.
 
-      for (PendingEntry<T> entry : this.pendingEntries_)
+      for (PendingEntry<T, ?> entry : this.pendingEntries_)
         entry.rejected (this.executor_, reason);
 
       // Clear the list of pending entries.
@@ -728,6 +735,18 @@ public class Promise <T>
    * @return
    */
   public static <T> Promise <T> resolve (T value)
+  {
+    return new Promise<> (value);
+  }
+
+  /**
+   * Helper method for returning a value from a OnResolved handler.
+   *
+   * @param value
+   * @param <T>
+   * @return
+   */
+  public static <T> Promise <T> value (T value)
   {
     return new Promise<> (value);
   }
@@ -775,14 +794,9 @@ public class Promise <T>
 
         // The first promise in the collection that is execute causes all promises
         // to be execute.
-        final OnRejected onRejected = new OnRejected ()
-        {
-          @Override
-          public Promise onRejected (Throwable reason)
-          {
-            settlement.reject (reason);
-            return null;
-          }
+        final OnRejected onRejected = reason -> {
+          settlement.reject (reason);
+          return null;
         };
 
         final OnResolved onResolved = new OnResolved ()
@@ -849,54 +863,39 @@ public class Promise <T>
 
     final Object lock = new Object ();
 
-    return new Promise<U> (new PromiseExecutor<U> ()
-    {
-      @Override
-      public void execute (final Settlement<U> settlement)
-      {
-        final OnResolved <U, ?> onResolved = resolved (new ResolveNoReturn<U> ()
+    return new Promise< > (settlement -> {
+      final OnResolved <U, ?> onResolved = resolved (value -> {
+        synchronized (lock)
         {
-          @Override
-          public void resolveNoReturn (U value)
+          try
           {
-            synchronized (lock)
-            {
-              try
-              {
-                settlement.resolve (value);
-              }
-              catch (Throwable e)
-              {
-                // Do nothing since we are not the first to finish
-              }
-            }
+            settlement.resolve (value);
           }
-        });
+          catch (Throwable e)
+          {
+            // Do nothing since we are not the first to finish
+          }
+        }
+      });
 
-        // The first promise in the collection that is execute causes all promises
-        // to be execute.
-        final OnRejected onRejected = rejected (new RejectNoReturn ()
+      // The first promise in the collection that is execute causes all promises
+      // to be execute.
+      final OnRejected onRejected = rejected (reason -> {
+        synchronized (lock)
         {
-          @Override
-          public void rejectNoReturn (Throwable reason)
+          try
           {
-            synchronized (lock)
-            {
-              try
-              {
-                settlement.reject (reason);
-              }
-              catch (Throwable e)
-              {
-                // Do nothing since we are not the first to finish
-              }
-            }
+            settlement.reject (reason);
           }
-        });
+          catch (Throwable e)
+          {
+            // Do nothing since we are not the first to finish
+          }
+        }
+      });
 
-        for (Promise <U> promise: promises)
-          promise.then (onResolved, onRejected);
-      }
+      for (Promise <U> promise: promises)
+        promise.then (onResolved, onRejected);
     });
   }
 }

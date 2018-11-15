@@ -10,6 +10,7 @@ import java.util.List;
 import static com.onehilltech.promises.Promise.ignoreReason;
 import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
+import static com.onehilltech.promises.Promise.value;
 import static com.onehilltech.promises.Promise.await;
 
 public class PromiseTest
@@ -24,32 +25,44 @@ public class PromiseTest
   }
 
   @Test
+  public void testTypeChanges ()
+  {
+    int start = 5;
+
+    Promise.resolve (start)
+           .then (value -> {
+             Assert.assertEquals (Integer.class, value.getClass ());
+             return value (value);
+           })
+           .then (value -> {
+             Assert.assertEquals (Integer.class, value.getClass ());
+             return value ("Hello, World!");
+           })
+           .then (resolved (str -> Assert.assertEquals (String.class, str.getClass ())));
+  }
+
+  @Test
   public void testThenResolve () throws Exception
   {
     synchronized (this.lock_)
     {
       Promise <Integer> p = Promise.resolve (7);
 
-      p.then (
-          resolved (new ResolveNoReturn<Integer> ()
-          {
-            @Override
-            public void resolveNoReturn (Integer value)
-            {
-              isComplete_ = true;
-              Assert.assertEquals (7, (int)value);
+      p.then (resolved (value -> {
+        this.isComplete_ = true;
+        Assert.assertEquals (7, (int)value);
+        Assert.assertEquals (Integer.class, value.getClass ());
 
-              synchronized (lock_)
-              {
-                lock_.notify ();
-              }
-            }
-          }));
+        synchronized (lock_)
+        {
+          this.lock_.notify ();
+        }
+      }));
 
       this.lock_.wait (5000);
 
       Assert.assertTrue (this.isComplete_);
-      Assert.assertEquals (Promise.Status.Resolved, p.getStatus ());
+      Assert.assertTrue (p.isResolved ());
     }
   }
 
@@ -60,146 +73,98 @@ public class PromiseTest
     {
       Promise <Integer> p = Promise.reject (new IllegalStateException ());
 
-      p.then (new OnResolved<Integer, Integer> () {
-        @Override
-        public Object onResolved (Integer value)
-        {
-          return 5;
-        }
-      }, rejected (new RejectNoReturn () {
-        @Override
-        public void rejectNoReturn (Throwable reason)
-        {
-          isComplete_ = true;
+      p._catch (rejected (reason -> {
+        this.isComplete_ = true;
 
-          synchronized (lock_)
-          {
-            Assert.assertEquals (IllegalStateException.class, reason.getClass ());
-
-            lock_.notify ();
-          }
+        synchronized (lock_)
+        {
+          Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+          this.lock_.notify ();
         }
       }));
 
       this.lock_.wait (5000);
 
       Assert.assertTrue (this.isComplete_);
+      Assert.assertTrue (p.isRejected ());
     }
   }
 
   @Test
   public void testMultipleThen () throws Exception
   {
-    final Promise <Integer> p1 = new Promise<> (new PromiseExecutor<Integer> ()
-    {
-      @Override
-      public void execute (Promise.Settlement<Integer> settlement)
+    final Promise <Integer> p1 = new Promise<> (settlement -> {
+      try
       {
-        try
-        {
-          Thread.sleep (30);
-          settlement.resolve (1);
-        }
-        catch (Exception e)
-        {
-          settlement.reject (e);
-        }
+        Thread.sleep (30);
+        settlement.resolve (1);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
       }
     });
 
-    final Promise <Integer> p2 = new Promise<> (new PromiseExecutor<Integer> ()
-    {
-      @Override
-      public void execute (Promise.Settlement<Integer> settlement)
+    final Promise <Integer> p2 = new Promise<> (settlement -> {
+      try
       {
-        try
-        {
-          Thread.sleep (30);
-          settlement.resolve (2);
-        }
-        catch (Exception e)
-        {
-          settlement.reject (e);
-        }
+        Thread.sleep (30);
+        settlement.resolve (2);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
       }
     });
 
-    final Promise <Integer> p3 = new Promise<> (new PromiseExecutor<Integer> ()
-    {
-      @Override
-      public void execute (Promise.Settlement<Integer> settlement)
+    final Promise <Integer> p3 = new Promise<> (settlement -> {
+      try
       {
-        try
-        {
-          Thread.sleep (30);
-          settlement.resolve (3);
-        }
-        catch (Exception e)
-        {
-          settlement.reject (e);
-        }
+        Thread.sleep (30);
+        settlement.resolve (3);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
       }
     });
 
-    final Promise <Integer> p4 = new Promise<> (new PromiseExecutor<Integer> ()
-    {
-      @Override
-      public void execute (Promise.Settlement<Integer> settlement)
+    final Promise <Integer> p4 = new Promise<> (settlement -> {
+      try
       {
-        try
-        {
-          Thread.sleep (30);
-          settlement.resolve (4);
-        }
-        catch (Exception e)
-        {
-          settlement.reject (e);
-        }
+        Thread.sleep (30);
+        settlement.resolve (4);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
       }
     });
 
     synchronized (this.lock_)
     {
-      p1.then (new OnResolved<Integer, Integer> () {
-        @Override
-        public Promise<Integer> onResolved (Integer value)
-        {
-          return p2;
-        }
-      }).then (new OnResolved<Integer, Integer> () {
-        @Override
-        public Promise<Integer> onResolved (Integer value)
-        {
-          return p3;
-        }
-      }).then (new OnResolved<Integer, Integer> () {
-        @Override
-        public Promise<Integer> onResolved (Integer value)
-        {
-          return p4;
-        }
-      }).then (resolved (new ResolveNoReturn<Integer> () {
-        @Override
-        public void resolveNoReturn (Integer value)
-        {
-          Assert.assertEquals (4, value.intValue ());
+      p1.then (value -> {
+        Assert.assertEquals (1, value.intValue ());
+        return p2;
+      }).then (value -> {
+        Assert.assertEquals (2, value.intValue ());
+        return p3;
+      }).then (value -> {
+        Assert.assertEquals (3, value.intValue ());
+        return p4;
+      }).then (resolved (value -> {
+        Assert.assertEquals (4, value.intValue ());
 
-          isComplete_ = true;
+        this.isComplete_ = true;
 
-          synchronized (lock_)
-          {
-            lock_.notify ();
-          }
-        }
-      }))._catch (rejected (new RejectNoReturn () {
-        @Override
-        public void rejectNoReturn (Throwable reason)
+        synchronized (lock_)
         {
-          Assert.fail ();
+          this.lock_.notify ();
         }
-      }));
+      }))
+        ._catch (rejected (reason -> Assert.fail ()));
 
-      this.lock_.wait ();
+      this.lock_.wait (5000);
 
       Assert.assertTrue (this.isComplete_);
     }
@@ -212,37 +177,21 @@ public class PromiseTest
     {
       Promise<List<Object>> p =
           Promise.all (
-              new Promise<> (new PromiseExecutor<Integer> () {
-                @Override
-                public void execute (Promise.Settlement<Integer> settlement)
-                {
-                  settlement.resolve (10);
-                }
-              }),
-              new Promise<> (new PromiseExecutor<Integer> () {
-                @Override
-                public void execute (Promise.Settlement<Integer> settlement)
-                {
-                  settlement.resolve (20);
-                }
-              }));
+              new Promise<> (settlement -> settlement.resolve (10)),
+              new Promise<> (settlement -> settlement.resolve (20))
+          );
 
-      p.then (resolved (new ResolveNoReturn<List<Object>> ()
-      {
-        @Override
-        public void resolveNoReturn (List<Object> value)
+      p.then (resolved (values -> {
+        Assert.assertEquals (2, values.size ());
+
+        Assert.assertEquals (10, values.get (0));
+        Assert.assertEquals (20, values.get (1));
+
+        this.isComplete_ = true;
+
+        synchronized (this.lock_)
         {
-          Assert.assertEquals (2, value.size ());
-
-          Assert.assertEquals (10, value.get (0));
-          Assert.assertEquals (20, value.get (1));
-
-          isComplete_ = true;
-
-          synchronized (lock_)
-          {
-            lock_.notify ();
-          }
+          this.lock_.notify ();
         }
       }));
 
@@ -262,90 +211,62 @@ public class PromiseTest
 
       for (int i = 0; i < 7; ++ i)
       {
-        Promise <Integer> p = new Promise<> (new PromiseExecutor<Integer> ()
-        {
-          @Override
-          public void execute (Promise.Settlement<Integer> settlement)
+        final int value = 10 * i;
+
+        Promise <Integer> p = new Promise<> (settlement -> {
+          try
           {
-            try
-            {
-              Thread.sleep (30);
-              settlement.resolve (10);
-            }
-            catch (Exception e)
-            {
-              settlement.reject (e);
-            }
+            Thread.sleep (30);
+            settlement.resolve (value);
+          }
+          catch (Exception e)
+          {
+            settlement.reject (e);
           }
         });
 
         promises.add (p);
       }
 
-      final Promise <Integer> start = new Promise<> (new PromiseExecutor<Integer> ()
-      {
-        @Override
-        public void execute (Promise.Settlement<Integer> settlement)
+      final Promise <Integer> start = new Promise<> (settlement -> {
+        try
         {
-          try
-          {
-            Thread.sleep (40);
-            settlement.resolve (20);
-          }
-          catch (Exception e)
-          {
-            settlement.reject (e);
-          }
+          Thread.sleep (40);
+          settlement.resolve (20);
+        }
+        catch (Exception e)
+        {
+          settlement.reject (e);
         }
       });
 
-      final Promise <Integer> middle = new Promise<> (new PromiseExecutor<Integer> ()
-      {
-        @Override
-        public void execute (Promise.Settlement<Integer> settlement)
+      final Promise <Integer> middle = new Promise<> (settlement -> {
+        try
         {
-          try
-          {
-            Thread.sleep (40);
-            settlement.resolve (20);
-          }
-          catch (Exception e)
-          {
-            settlement.reject (e);
-          }
+          Thread.sleep (40);
+          settlement.resolve (20);
+        }
+        catch (Exception e)
+        {
+          settlement.reject (e);
         }
       });
 
-      start.then (new OnResolved<Integer, Integer> () {
-        @Override
-        public Object onResolved (Integer value)
-        {
-          return middle;
-        }
-      }).then (new OnResolved<Integer, List <Object>> () {
-        @Override
-        public Object onResolved (Integer value)
-        {
-          return Promise.all (promises);
-        }
-      }).then (resolved (new ResolveNoReturn<List<Object>> ()
-      {
-        @Override
-        public void resolveNoReturn (List<Object> result)
-        {
-          isComplete_ = true;
+      start.then (value -> middle)
+           .then (value -> Promise.all (promises))
+           .then (resolved (results -> {
+             this.isComplete_ = true;
 
-          Assert.assertEquals (promises.size (), result.size ());
+             Assert.assertEquals (promises.size (), results.size ());
 
-          for (int i = 0; i < result.size (); ++ i)
-            Assert.assertEquals (10, result.get (i));
+             for (int i = 0; i < results.size (); ++ i)
+               Assert.assertEquals (10 * i, results.get (i));
 
-          synchronized (lock_)
-          {
-            lock_.notify ();
-          }
-        }
-      }));
+             synchronized (lock_)
+             {
+               lock_.notify ();
+             }
+           }));
 
       this.lock_.wait (5000);
 
@@ -371,18 +292,13 @@ public class PromiseTest
   public void testRejectOnly () throws Exception
   {
     Promise.reject (new IllegalStateException ())
-           ._catch (rejected (new RejectNoReturn ()
-           {
-             @Override
-             public void rejectNoReturn (Throwable reason)
-             {
-               isComplete_ = true;
-               Assert.assertEquals (reason.getClass (), IllegalStateException.class);
+           ._catch (rejected (reason -> {
+             this.isComplete_ = true;
+             Assert.assertEquals (reason.getClass (), IllegalStateException.class);
 
-               synchronized (lock_)
-               {
-                 lock_.notify ();
-               }
+             synchronized (this.lock_)
+             {
+               this.lock_.notify ();
              }
            }));
 
@@ -395,76 +311,29 @@ public class PromiseTest
   }
 
   @Test
-  public void testPromiseChainTyped () throws Exception
-  {
-    synchronized (this.lock_)
-    {
-      OnResolved<String, Long> completion1 = new OnResolved<String, Long> ()
-      {
-        @Override
-        public Object onResolved (String str)
-        {
-          Assert.assertEquals ("Hello, World", str);
-          return 10L;
-        }
-      };
-
-      OnResolved<Long, Void> completion2 = resolved (new ResolveNoReturn<Long> ()
-      {
-        @Override
-        public void resolveNoReturn (Long value)
-        {
-          Assert.assertEquals (10L, (long)value);
-          isComplete_ = true;
-
-          synchronized (lock_)
-          {
-            lock_.notify ();
-          }
-        }
-      });
-
-      Promise.resolve ("Hello, World")
-             .then (completion1)
-             .then (completion2);
-
-      this.lock_.wait (5000);
-
-      Assert.assertTrue (this.isComplete_);
-    }
-  }
-
-  @Test
   public void testPromiseChain () throws Exception
   {
     synchronized (this.lock_)
     {
       Promise.resolve ("Hello, World")
-             .then (new OnResolved<String, Integer> () {
-               @Override
-               public Object onResolved (String str)
-               {
-                 Assert.assertEquals ("Hello, World", str);
-                 return 10;
-               }
+             .then (str -> {
+               Assert.assertEquals ("Hello, World", str);
+               return value (10);
              })
-             .then (resolved (new ResolveNoReturn<Integer> ()
-             {
-               @Override
-               public void resolveNoReturn (Integer value)
+             .then (value -> {
+               // n is of type long, but assertEquals has ambiguous calls.
+               Assert.assertEquals (10, value.intValue ());
+
+               synchronized (this.lock_)
                {
-                 // n is of type long, but assertEquals has ambiguous calls.
-                 Assert.assertEquals (10, value.intValue ());
-
-                 synchronized (lock_)
-                 {
-                   isComplete_ = true;
-                   lock_.notify ();
-                 }
+                 this.isComplete_ = true;
+                 this.lock_.notify ();
                }
-             }));
 
-      this.lock_.wait (5000);
+               return null;
+             });
+
+      this.lock_.wait ();
 
       Assert.assertTrue (this.isComplete_);
     }
@@ -476,24 +345,14 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.resolve ("Hello, World")
-             .then (resolved (new ResolveNoReturn<String> () {
-               @Override
-               public void resolveNoReturn (String str)
-               {
-                 Assert.assertEquals ("Hello, World", str);
-               }
-             }))
-             .then (resolved (new ResolveNoReturn<Object> () {
-               @Override
-               public void resolveNoReturn (Object value)
-               {
-                 Assert.assertNull (value);
-                 isComplete_ = true;
+             .then (resolved (str -> Assert.assertEquals ("Hello, World", str)))
+             .then (resolved (value -> {
+               Assert.assertNull (value);
+               this.isComplete_ = true;
 
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
                }
              }));
 
@@ -509,36 +368,17 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ("GREAT"))
-             .then (new OnResolved<Object, Integer> () {
-               @Override
-               public Object onResolved (Object value)
-               {
-                 Assert.fail ();
-                 return 10;
-               }
-             })
-             .then (new OnResolved<Integer, Integer> () {
-               @Override
-               public Object onResolved (Integer value)
-               {
-                 Assert.fail ();
-                 return 40;
-               }
-             })
-             ._catch (rejected (new RejectNoReturn ()
-             {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-                 Assert.assertEquals (IllegalStateException.class, reason.getClass ());
-                 Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
+             .then (resolved (value -> Assert.fail ()))
+             .then (resolved (value -> Assert.fail ()))
+             ._catch (rejected (reason -> {
+               Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+               Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
-                 isComplete_ = true;
+               this.isComplete_ = true;
 
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
                }
              }));
 
@@ -554,52 +394,24 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ("GREAT"))
-             .then (new OnResolved<Object, Integer> () {
-               @Override
-               public Object onResolved (Object value)
-               {
-                 Assert.fail ();
-                 return 10;
-               }
-             })
-             .then (new OnResolved<Integer, Integer> () {
-               @Override
-               public Object onResolved (Integer value)
-               {
-                 Assert.fail ();
-                 return 40;
-               }
-             })
-             ._catch (rejected (new RejectNoReturn ()
-             {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-                 Assert.assertEquals (IllegalStateException.class, reason.getClass ());
-                 Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
+             .then (resolved (value -> Assert.fail ()))
+             .then (resolved (value -> Assert.fail ()))
+             ._catch (rejected (reason -> {
+               Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+               Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
-                 isComplete_ = true;
+               this.isComplete_ = true;
 
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
                }
              }))
-             ._catch (rejected (new RejectNoReturn ()
-             {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-                 Assert.fail ();
-               }
-             }));
+             ._catch (rejected (reason -> Assert.fail ()));
 
       this.lock_.wait (5000);
 
       Assert.assertTrue (this.isComplete_);
-
-      this.lock_.wait (1000);
     }
   }
 
@@ -610,26 +422,18 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (new OnRejected () {
-               @Override
-               public Promise onRejected (Throwable reason)
-               {
-                 Assert.assertEquals (IllegalStateException.class, reason.getClass ());
-                 return Promise.resolve (10);
-               }
+             ._catch (reason -> {
+               Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+               return value (10);
              })
-             .then (resolved (new ResolveNoReturn<Object> () {
-               @Override
-               public void resolveNoReturn (Object value)
+             .then (resolved (value -> {
+               Assert.assertEquals (10, value);
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
                {
-                 Assert.assertEquals (10, value);
-
-                 isComplete_ = true;
-
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+                 this.lock_.notify ();
                }
              }));
 
@@ -645,22 +449,18 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             .then (resolved (new ResolveNoReturn<Object> () {
-               @Override
-               public void resolveNoReturn (Object value)
+             .then (resolved (value -> {
+               Assert.assertNull (value);
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
                {
-                 Assert.assertNull (value);
-
-                 isComplete_ = true;
-
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+                 this.lock_.notify ();
                }
              }));
 
-      this.lock_.wait (500);
+      this.lock_.wait (100);
 
       Assert.assertFalse (this.isComplete_);
     }
@@ -672,25 +472,15 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (rejected (new RejectNoReturn () {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-                 Assert.assertEquals (IllegalStateException.class, reason.getClass ());
-               }
-             }))
-             .then (resolved (new ResolveNoReturn<Object> () {
-               @Override
-               public void resolveNoReturn (Object value)
-               {
-                 Assert.assertNull (value);
+             ._catch (rejected (reason -> Assert.assertEquals (IllegalStateException.class, reason.getClass ())))
+             .then (resolved (value -> {
+               Assert.assertNull (value);
 
-                 isComplete_ = true;
+               this.isComplete_ = true;
 
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
                }
              }));
 
@@ -706,25 +496,15 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.resolve (50)
-             ._catch (rejected (new RejectNoReturn () {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-                 Assert.fail ();
-               }
-             }))
-             .then (resolved (new ResolveNoReturn<Object> () {
-               @Override
-               public void resolveNoReturn (Object value)
-               {
-                 Assert.assertNull (value);
+             ._catch (rejected (reason -> Assert.fail ()))
+             .then (resolved (value -> {
+               Assert.assertNull (value);
 
-                 isComplete_ = true;
+               this.isComplete_ = true;
 
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
                }
              }));
 
@@ -740,25 +520,15 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (rejected (new RejectNoReturn () {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-                 Assert.assertEquals (IllegalStateException.class, reason.getClass ());
-               }
-             }))
-             .then (resolved (new ResolveNoReturn<Object> () {
-               @Override
-               public void resolveNoReturn (Object value)
-               {
-                 Assert.assertNull (value);
+             ._catch (rejected (reason -> Assert.assertEquals (IllegalStateException.class, reason.getClass ())))
+             .then (resolved (value -> {
+               Assert.assertNull (value);
 
-                 isComplete_ = true;
+               isComplete_ = true;
 
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+               synchronized (lock_)
+               {
+                 lock_.notify ();
                }
              }));
 
@@ -774,19 +544,14 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.race (new ArrayList<Promise<Integer>> ())
-             .then (resolved (new ResolveNoReturn<Integer> ()
-             {
-               @Override
-               public void resolveNoReturn (Integer value)
+             .then (resolved (value -> {
+               Assert.assertNull (value);
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
                {
-                 Assert.assertNull (value);
-
-                 isComplete_ = true;
-
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+                 this.lock_.notify ();
                }
              }));
 
@@ -803,10 +568,7 @@ public class PromiseTest
     {
       Promise<Integer> p =
           Promise.race (
-              new Promise<> (new PromiseExecutor<Integer> ()
-              {
-                @Override
-                public void execute (Promise.Settlement<Integer> settlement)
+              new Promise<> (settlement -> {
                 {
                   try
                   {
@@ -819,10 +581,7 @@ public class PromiseTest
                   }
                 }
               }),
-              new Promise<> (new PromiseExecutor<Integer> ()
-              {
-                @Override
-                public void execute (Promise.Settlement<Integer> settlement)
+              new Promise<> (settlement -> {
                 {
                   try
                   {
@@ -835,10 +594,7 @@ public class PromiseTest
                   }
                 }
               }),
-              new Promise<> (new PromiseExecutor<Integer> ()
-              {
-                @Override
-                public void execute (Promise.Settlement<Integer> settlement)
+              new Promise<> (settlement -> {
                 {
                   try
                   {
@@ -853,28 +609,18 @@ public class PromiseTest
               })
           );
 
-      p.then (resolved (new ResolveNoReturn<Integer> () {
-        @Override
-        public void resolveNoReturn (Integer value)
+      p.then (resolved (value -> {
+        Assert.assertEquals (20, (int) value);
+
+        Assert.assertFalse (isComplete_);
+        isComplete_ = true;
+
+        synchronized (lock_)
         {
-          Assert.assertEquals (20, (int)value);
-
-          Assert.assertFalse (isComplete_);
-          isComplete_ = true;
-
-          synchronized (lock_)
-          {
-            lock_.notify ();
-          }
+          lock_.notify ();
         }
       }))
-      ._catch (rejected (new RejectNoReturn () {
-        @Override
-        public void rejectNoReturn (Throwable reason)
-        {
-          Assert.fail ();
-        }
-      }));
+       ._catch (rejected (reason -> Assert.fail ()));
 
       this.lock_.wait (5000);
 
@@ -889,18 +635,14 @@ public class PromiseTest
     {
       Promise.resolve (5)
              ._catch (ignoreReason)
-             .then (resolved (new ResolveNoReturn<Object> () {
-               @Override
-               public void resolveNoReturn (Object value)
+             .then (resolved (value -> {
+               Assert.assertNull (value);
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
                {
-                 Assert.assertNull (value);
-
-                 isComplete_ = true;
-
-                 synchronized (lock_)
-                 {
-                   lock_.notify ();
-                 }
+                 this.lock_.notify ();
                }
              }));
 
@@ -915,34 +657,20 @@ public class PromiseTest
   {
     synchronized (this.lock_)
     {
-      Promise<Integer> p1 = new Promise<> (new PromiseExecutor<Integer> ()
-      {
-        @Override
-        public void execute (Promise.Settlement<Integer> settlement)
+      Promise<Integer> p1 = new Promise<> (settlement -> {
+        try
         {
-          try
-          {
-            Thread.sleep (300);
-          }
-          catch (InterruptedException e)
-          {
-            isComplete_ = true;
-          }
+          Thread.sleep (300);
+        }
+        catch (InterruptedException e)
+        {
+          this.isComplete_ = true;
         }
       });
 
       Thread.sleep (100);
       p1.cancel (true);
-
-      p1.then (new OnResolved<Integer, Object> ()
-      {
-        @Override
-        public Object onResolved (Integer value)
-        {
-          isComplete_ = false;
-          return null;
-        }
-      });
+      p1.then (resolved (value -> this.isComplete_ = false));
 
       this.lock_.wait (100);
 
@@ -973,43 +701,19 @@ public class PromiseTest
     }
   }
 
-  private Promise <Integer> makeSimplePromise (final int value)
+  private <T> Promise <T> makeSimplePromise (final T value, final long sleep)
   {
-    return new Promise<> (new PromiseExecutor<Integer> ()
-    {
-      @Override
-      public void execute (Promise.Settlement<Integer> settlement)
-      {
-        settlement.resolve (value);
-      }
-    });
-  }
-
-  private Promise <Integer> makeSimplePromise (final int value, final long sleep)
-  {
-    return new Promise<> (new PromiseExecutor<Integer> ()
-    {
-      @Override
-      public void execute (Promise.Settlement<Integer> settlement)
-          throws Throwable
-      {
-        Thread.sleep (sleep);
-        settlement.resolve (value);
-      }
+    return new Promise<> (settlement -> {
+      Thread.sleep (sleep);
+      settlement.resolve (value);
     });
   }
 
   private Promise <Integer> makeSimplePromise (final Throwable reason, final long sleep)
   {
-    return new Promise<> (new PromiseExecutor<Integer> ()
-    {
-      @Override
-      public void execute (Promise.Settlement<Integer> settlement)
-          throws Exception
-      {
-        Thread.sleep (sleep);
-        settlement.reject (reason);
-      }
+    return new Promise<> (settlement -> {
+      Thread.sleep (sleep);
+      settlement.reject (reason);
     });
   }
 }

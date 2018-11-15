@@ -7,13 +7,13 @@ import java.util.concurrent.Executor;
  * of chaining another promise that will be used to get the value for resolve handlers
  * later in the chain.
  */
-public class OnRejectedExecutor
+public class OnRejectedExecutor <T>
 {
   private final OnRejected onRejected_;
 
-  static OnRejectedExecutor wrapOrNull (OnRejected onRejected)
+  static <T> OnRejectedExecutor <T> wrapOrNull (OnRejected onRejected)
   {
-    return onRejected != null ? new OnRejectedExecutor (onRejected) : null;
+    return onRejected != null ? new OnRejectedExecutor <> (onRejected) : null;
   }
 
   OnRejectedExecutor (OnRejected onRejected)
@@ -21,20 +21,13 @@ public class OnRejectedExecutor
     this.onRejected_ = onRejected;
   }
 
-  void execute (Executor executor, final Throwable reason, final ContinuationPromise continuation)
+  void execute (Executor executor, final Throwable reason, final ContinuationPromise <T> continuation)
   {
-    executor.execute (new Runnable ()
-    {
-      @Override
-      public void run ()
-      {
-        execute (reason, continuation);
-      }
-    });
+    executor.execute (() -> this.execute (reason, continuation));
   }
 
   @SuppressWarnings ("unchecked")
-  protected void execute (final Throwable reason, final ContinuationPromise continuation)
+  protected void execute (final Throwable reason, final ContinuationPromise <T> continuation)
   {
     try
     {

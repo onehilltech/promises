@@ -28,25 +28,23 @@ class ContinuationPromise <T> extends Promise <T>
   {
     if (promise != null)
     {
-      promise.then (resolved (new ResolveNoReturn<T> ()
+      switch (promise.getStatus ())
       {
-        @Override
-        public void resolveNoReturn (T value)
-        {
-          onResolve (value);
-        }
-      }), rejected (new RejectNoReturn ()
-      {
-        @Override
-        public void rejectNoReturn (Throwable reason)
-        {
-          onReject (reason);
-        }
-      }));
+        case Resolved:
+          this.onResolve (promise.getValue ());
+          break;
+
+        case Rejected:
+          this.onReject (promise.getRejection ());
+          break;
+
+        default:
+          promise.then (resolved (this::onResolve), rejected (this::onReject));
+      }
     }
     else
     {
-      this.onResolve (null);
+      this.continueWithNull ();
     }
   }
 

@@ -27,38 +27,22 @@ public class OnResolvedExecutor <T, U>
   }
 
   @SuppressWarnings ("unchecked")
-  void execute (Executor executor, Object objValue, final ContinuationPromise continuation)
+  void execute (Executor executor, T value, final ContinuationPromise <U> continuation)
   {
-    final T value = (T)objValue;
-    executor.execute (new Runnable ()
-    {
-      @Override
-      public void run ()
-      {
-        execute (value, continuation);
-      }
-    });
+    executor.execute (() -> execute (value, continuation));
   }
 
-  void execute (Executor executor, final Throwable reason, final ContinuationPromise continuation)
+  void execute (Executor executor, final Throwable reason, final ContinuationPromise <U> continuation)
   {
-    executor.execute (new Runnable ()
-    {
-      @Override
-      public void run ()
-      {
-        continuation.continueWith (reason);
-      }
-    });
+    executor.execute (() -> continuation.continueWith (reason));
   }
 
   @SuppressWarnings ("unchecked")
-  void execute (T value, ContinuationPromise continuation)
+  void execute (T value, ContinuationPromise <U> continuation)
   {
     try
     {
-      Object result = this.onResolved_.onResolved (value);
-      Promise <U> promise = ((result instanceof Promise)) ? (Promise<U>)result : Promise.resolve ((U)result);
+      Promise <U> promise = this.onResolved_.onResolved (value);
       continuation.continueWith (promise);
     }
     catch (Throwable e)

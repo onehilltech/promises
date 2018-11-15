@@ -18,7 +18,7 @@ public class OnResolvedNoReturn <T, U> implements OnResolved <T, U>
 
   @Override
   @SuppressWarnings ("unchecked")
-  public Promise onResolved (T value)
+  public Promise <U> onResolved (T value) throws Throwable
   {
     this.resolveNoReturn_.resolveNoReturn (value);
     return null;

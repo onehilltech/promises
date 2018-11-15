@@ -8,5 +8,5 @@ package com.onehilltech.promises;
  */
 public interface ResolveNoReturn <T>
 {
-  void resolveNoReturn (T value);
+  void resolveNoReturn (T value) throws Throwable;
 }
