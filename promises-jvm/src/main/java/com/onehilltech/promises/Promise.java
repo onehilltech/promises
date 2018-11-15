@@ -19,6 +19,7 @@ package com.onehilltech.promises;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -26,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -133,14 +135,87 @@ public class Promise <T>
 
   private final ArrayList <ContinuationPromise> continuations_ = new ArrayList<> ();
 
+  /// @{ Await Methods
+
+  /**
+   * Await settlement of a promise.
+   *
+   * @param promise           Promise of interest.
+   * @return                  The resolved value.
+   * @throws Throwable        Reason for rejection.
+   */
   public static <T> T await (Promise <T> promise)
       throws Throwable
   {
-    AwaitHandler <T> handler = new AwaitHandler<> ();
+    return await (promise, true);
+  }
+
+  /**
+   * Await settlement of a promise.
+   *
+   * @param promise           Promise of interest.
+   * @return                  The resolved value.
+   * @throws Throwable        Reason for rejection.
+   */
+  public static <T> T await (Promise <T> promise, boolean interruptible)
+      throws Throwable
+  {
+    AwaitHandler <T> handler = interruptible ? new AwaitHandler<T> () : new UninterruptiblyAwaitHandler<T> ();
     promise.then (handler)._catch (handler);
 
     return handler.await ();
   }
+
+  /**
+   * Await settlement of a promise up to the specified deadline.
+   *
+   * @param promise           Promise of interest.
+   * @param deadline          When the promise must be resolved by.
+   * @return                  The resolved value.
+   * @throws Throwable        Reason for rejection
+   */
+  public static <T> T await (Promise <T> promise, Date deadline)
+      throws Throwable
+  {
+    AwaitHandler <T> handler = new DeadlineAwaitHandler <> (deadline);
+    promise.then (handler)._catch (handler);
+
+    return handler.await ();
+  }
+
+  /**
+   * Await settlement of a promise for a specified amount of time.
+   *
+   * @param promise           Promise of interest.
+   * @param nanos             Nanoseconds to wait
+   * @return                  The resolved value.
+   * @throws Throwable        Reason for rejection
+   */
+  public static <T> T await (Promise <T> promise, long nanos)
+      throws Throwable
+  {
+    AwaitHandler <T> handler = new TimeAwaitHandler<> (nanos);
+    promise.then (handler)._catch (handler);
+
+    return handler.await ();
+  }
+
+  /**
+   * Await settlement of a promise for a specified amount of time.
+   *
+   * @param promise           Promise of interest.
+   * @param time              Time to wait
+   * @param unit              Units of measure for time
+   * @return                  The resolved value.
+   * @throws Throwable        Reason for rejection
+   */
+  public static <T> T await (Promise <T> promise, long time, TimeUnit unit)
+      throws Throwable
+  {
+    return await (promise, unit.toNanos (time));
+  }
+
+  /// @}
 
   /**
    * Link to a continuation promise that is waiting for its parent promise

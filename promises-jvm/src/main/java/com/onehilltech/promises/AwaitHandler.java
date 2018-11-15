@@ -59,7 +59,7 @@ class AwaitHandler <T>
    * @return                The resolved value
    * @throws Throwable      The reason for rejection
    */
-  public T await () throws Throwable
+  final T await () throws Throwable
   {
     this.lock_.lock ();
 
@@ -72,7 +72,7 @@ class AwaitHandler <T>
       if (this.reason_ != null)
         throw this.reason_;
 
-      this.isSettled_.await ();
+      this.await (this.isSettled_);
 
       if (this.value_ != null)
         return this.value_;
@@ -83,5 +83,10 @@ class AwaitHandler <T>
     {
       this.lock_.unlock ();
     }
+  }
+
+  protected void await (Condition condition) throws Throwable
+  {
+    condition.await ();
   }
 }
