@@ -130,16 +130,16 @@ Promise.reject (new IllegalStateException ("This is a rejected promise"))
 ```
 
 You may notice that the handlers return `null` in the example above. This is because the
-handler has the option of returning a `Promise` that to used to resolve the value for the
-next handler in the chain. If the handler does not return a `Promise`, then `null` is passed
-to the next handler.
+handler has the option of returning a value or a `Promise` that to used to resolve the value 
+for the next handler in the chain. If the handler does not a value or a `Promise`, then 
+`null` is passed to the next handler.
 
 ```java
 Promise.resolve (5)
        .then (n -> {
          // n == 5
          System.out.println ("Resolved value: " + n);
-         return Promise.resolve (10);
+         return 10;
        })
        .then (n -> {
          // n == 10
@@ -148,7 +148,7 @@ Promise.resolve (5)
        });
 ```
 
-Not all handlers will return a `Promise` object. If you are in this situation, then you can use
+Not all handlers will return a value or `Promise`. If you are in this situation, then you can use
 the `ResolveNoReturn` and `RejectNoReturn` helper classes, or `resolved` and `rejected` helper
 methods.
 
