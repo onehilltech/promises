@@ -14,7 +14,10 @@ Promise library for JVM and Android
 * Supports Java Lambda expressions
 * Android module allows resolve/reject callbacks to run on UI thread
 
+
 ## Installation
+
+> This library requires Java 1.8
 
 ### Gradle
 
@@ -33,49 +36,6 @@ dependencies {
   implementation 'com.onehilltech.promises:promises-android:x.y.z'
 }
 ```
-
-### Java 1.8 on JVM
-
-Just set the source and target compiler option to 1.8:
-
-```
-targetCompatibility = '1.8'
-sourceCompatibility = '1.8'
-```
-
-### Java 1.8 (Lambda expressions) on Android
-
-Unless you are using Android Studio 3.0.0 or above, we recommend using 
-[Retrolambda](https://github.com/orfjackal/retrolambda) to enable Java Lambda expressions on
-Java 1.7 or earlier. Add the following dependency to your top-level `build.gradle` script:
-
-```
-buildscript {
-  dependencies {
-    classpath 'me.tatarka:gradle-retrolambda:x.y.z'
-  }
-}
-```
-
-In `build.gradle` for each submodule wanting to use Java Lambda expressions with
-Promises, add the following to the top:
-
-```
-apply plugin: 'me.tatarka.retrolambda'
-```
-
-Then, set the source and target to 1.8:
-
-```
-android {
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-}
-```
-
-Lastly, make sure you are using Android SDK build tools `26.0.0`.
 
 ## Quick Start
 
