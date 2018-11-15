@@ -16,13 +16,11 @@ public class PromiseTest
 {
   private final Object lock_ = new Object ();
   private boolean isComplete_;
-  private int counter_;
 
   @Before
   public void setup ()
   {
     this.isComplete_ = false;
-    this.counter_ = 0;
   }
 
   @Test
@@ -64,9 +62,9 @@ public class PromiseTest
 
       p.then (new OnResolved<Integer, Integer> () {
         @Override
-        public Promise<Integer> onResolved (Integer value)
+        public Object onResolved (Integer value)
         {
-          return Promise.resolve (5);
+          return 5;
         }
       }, rejected (new RejectNoReturn () {
         @Override
@@ -320,13 +318,13 @@ public class PromiseTest
 
       start.then (new OnResolved<Integer, Integer> () {
         @Override
-        public Promise<Integer> onResolved (Integer value)
+        public Object onResolved (Integer value)
         {
           return middle;
         }
       }).then (new OnResolved<Integer, List <Object>> () {
         @Override
-        public Promise<List <Object>> onResolved (Integer value)
+        public Object onResolved (Integer value)
         {
           return Promise.all (promises);
         }
@@ -404,10 +402,10 @@ public class PromiseTest
       OnResolved<String, Long> completion1 = new OnResolved<String, Long> ()
       {
         @Override
-        public Promise<Long> onResolved (String str)
+        public Object onResolved (String str)
         {
           Assert.assertEquals ("Hello, World", str);
-          return Promise.resolve (10L);
+          return 10L;
         }
       };
 
@@ -444,10 +442,10 @@ public class PromiseTest
       Promise.resolve ("Hello, World")
              .then (new OnResolved<String, Integer> () {
                @Override
-               public Promise<Integer> onResolved (String str)
+               public Object onResolved (String str)
                {
                  Assert.assertEquals ("Hello, World", str);
-                 return Promise.resolve (10);
+                 return 10;
                }
              })
              .then (resolved (new ResolveNoReturn<Integer> ()
@@ -513,18 +511,18 @@ public class PromiseTest
       Promise.reject (new IllegalStateException ("GREAT"))
              .then (new OnResolved<Object, Integer> () {
                @Override
-               public Promise<Integer> onResolved (Object value)
+               public Object onResolved (Object value)
                {
                  Assert.fail ();
-                 return Promise.resolve (10);
+                 return 10;
                }
              })
              .then (new OnResolved<Integer, Integer> () {
                @Override
-               public Promise<Integer> onResolved (Integer value)
+               public Object onResolved (Integer value)
                {
                  Assert.fail ();
-                 return Promise.resolve (40);
+                 return 40;
                }
              })
              ._catch (rejected (new RejectNoReturn ()
@@ -558,18 +556,18 @@ public class PromiseTest
       Promise.reject (new IllegalStateException ("GREAT"))
              .then (new OnResolved<Object, Integer> () {
                @Override
-               public Promise<Integer> onResolved (Object value)
+               public Object onResolved (Object value)
                {
                  Assert.fail ();
-                 return Promise.resolve (10);
+                 return 10;
                }
              })
              .then (new OnResolved<Integer, Integer> () {
                @Override
-               public Promise<Integer> onResolved (Integer value)
+               public Object onResolved (Integer value)
                {
                  Assert.fail ();
-                 return Promise.resolve (40);
+                 return 40;
                }
              })
              ._catch (rejected (new RejectNoReturn ()
@@ -939,7 +937,7 @@ public class PromiseTest
       p1.then (new OnResolved<Integer, Object> ()
       {
         @Override
-        public Promise<Object> onResolved (Integer value)
+        public Object onResolved (Integer value)
         {
           isComplete_ = false;
           return null;

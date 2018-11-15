@@ -57,7 +57,8 @@ public class OnResolvedExecutor <T, U>
   {
     try
     {
-      Promise promise = this.onResolved_.onResolved (value);
+      Object result = this.onResolved_.onResolved (value);
+      Promise <U> promise = ((result instanceof Promise)) ? (Promise<U>)result : Promise.resolve ((U)result);
       continuation.continueWith (promise);
     }
     catch (Throwable e)
