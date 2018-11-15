@@ -23,14 +23,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-
 import androidx.test.annotation.UiThreadTest;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import static com.onehilltech.promises.Promise.resolved;
-import static com.onehilltech.promises.Promise.rejected;
-import static com.onehilltech.promises.ResolvedOnUIThread.onUiThread;
 import static com.onehilltech.promises.RejectedOnUIThread.onUiThread;
+import static com.onehilltech.promises.ResolvedOnUIThread.onUiThread;
 
 @RunWith(AndroidJUnit4.class)
 public class ResolvedOnUIThreadTest
@@ -50,26 +48,14 @@ public class ResolvedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.resolve (10)
-             .then (onUiThread (resolved (new ResolveNoReturn<Integer> ()
-             {
-               @Override
-               public void resolveNoReturn (Integer value)
-               {
-                 boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
-                 Assert.assertTrue (isUiThread);
+             .then (onUiThread (resolved (value -> {
+               boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
+               Assert.assertTrue (isUiThread);
 
-                 synchronized (lock_)
-                 {
-                   complete_ = true;
-                   lock_.notify ();
-                 }
-               }
-             })))
-             ._catch (onUiThread (rejected (new RejectNoReturn () {
-               @Override
-               public void rejectNoReturn (Throwable reason)
+               synchronized (this.lock_)
                {
-
+                 this.complete_ = true;
+                 this.lock_.notify ();
                }
              })));
 
@@ -86,24 +72,13 @@ public class ResolvedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.resolve (10)
-             .then (onUiThread (resolved (new ResolveNoReturn<Integer> ()
-             {
-               @Override
-               public void resolveNoReturn (Integer value)
-               {
-                 boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
-                 Assert.assertTrue (isUiThread);
+             .then (onUiThread (resolved (value -> {
+               boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
+               Assert.assertTrue (isUiThread);
 
-                 complete_ = true;
-               }
+               this.complete_ = true;
              })))
-             ._catch (onUiThread (rejected (new RejectNoReturn () {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-
-               }
-             })));
+             ._catch (onUiThread (Promise.ignoreReason));
 
       Assert.assertTrue (this.complete_);
     }

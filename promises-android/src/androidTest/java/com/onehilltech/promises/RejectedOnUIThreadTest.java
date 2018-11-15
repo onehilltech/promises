@@ -48,19 +48,14 @@ public class RejectedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (onUiThread (rejected (new RejectNoReturn ()
-             {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-                 boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
-                 Assert.assertTrue (isUiThread);
+             ._catch (onUiThread (rejected (reason -> {
+               boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
+               Assert.assertTrue (isUiThread);
 
-                 synchronized (lock_)
-                 {
-                   complete_ = true;
-                   lock_.notify ();
-                 }
+               synchronized (this.lock_)
+               {
+                 this.complete_ = true;
+                 this.lock_.notify ();
                }
              })));
 
@@ -77,16 +72,11 @@ public class RejectedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (onUiThread (rejected (new RejectNoReturn ()
-             {
-               @Override
-               public void rejectNoReturn (Throwable reason)
-               {
-                 boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
-                 Assert.assertTrue (isUiThread);
+             ._catch (onUiThread (rejected (reason -> {
+               boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
+               Assert.assertTrue (isUiThread);
 
-                 complete_ = true;
-               }
+               this.complete_ = true;
              })));
 
       // We should complete the promise sequence before even reaching this
