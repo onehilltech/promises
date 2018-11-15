@@ -139,7 +139,7 @@ Promise.resolve (5)
        .then (n -> {
          // n == 5
          System.out.println ("Resolved value: " + n);
-         return 10;
+         return value (10);
        })
        .then (n -> {
          // n == 10
@@ -159,10 +159,7 @@ import static com.onehilltech.promises.Promise.rejected;
 // ...
 
 Promise.resolve (5)
-       .then (resolved (n -> {
-         // n == 5
-         System.out.println ("Resolved value: " + n);
-       }))
+       .then (resolved (n -> System.out.println ("Resolved value: " + n)))        // n == 5
        ._catch (rejected (reason -> reason.printStackTrace ()));
 ```
 
@@ -174,14 +171,8 @@ handle any rejection from the preceding promises.
 
 ```java
 Promise.resolve (5)
-       .then (resolved (n -> {
-         // n == 5
-         System.out.println ("Resolved value: " + n);
-       }))
-       .then (resolved (value -> {
-         // value == null
-         System.out.println ("Resolved value: " + value);
-       }))
+       .then (resolved (n -> System.out.println ("Resolved value: " + n)))          // n == 5
+       .then (resolved (value -> System.out.println ("Resolved value: " + value)))  // value == null
        ._catch (rejected (reason -> { }))
        .then (this::doSomethingElse)
        ._catch (Promise.ignoreReason);
@@ -253,10 +244,7 @@ import static com.onehilltech.promises.ResolvedOnUIThread.onUiThread;
 // ...
 
 Promise.resolve ("Hello, World!")
-       .then (onUiThread (resolved (str -> {
-         // Update the UI component
-         this.label.setText (str);
-       })))
+       .then (onUiThread (resolved (str -> this.label.setText (str))))
        ._catch (onUiThread (rejected (reason -> reason.printStackTrace ())));
 ```
 
