@@ -74,10 +74,10 @@ class AwaitHandler <T>
 
       this.await (this.isSettled_);
 
-      if (this.value_ != null)
-        return this.value_;
-      else
+      if (this.reason_ != null)
         throw this.reason_;
+
+      return this.value_;
     }
     finally
     {
