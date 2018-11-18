@@ -259,6 +259,8 @@ public class Promise <T>
     {
       if (this.onResolved != null)
         this.onResolved.execute (executor, value, this.cont);
+      else if (this.onRejected != null)
+        this.onRejected.execute (executor, value, this.cont);
     }
 
     void rejected (Executor executor, Throwable reason)

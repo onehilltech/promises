@@ -491,11 +491,12 @@ public class PromiseTest
   }
 
   @Test
-  public void testResolveCatchThen () throws Exception
+  public void testResolveSkipCatchThen () throws Exception
   {
     synchronized (this.lock_)
     {
       Promise.resolve (50)
+             .then (n -> value (30))
              ._catch (rejected (reason -> Assert.fail ()))
              .then (resolved (value -> {
                Assert.assertNull (value);
