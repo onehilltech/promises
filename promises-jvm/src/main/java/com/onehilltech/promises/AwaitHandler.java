@@ -15,6 +15,8 @@ class AwaitHandler <T>
 
   private Throwable reason_;
 
+  private boolean settled_ = false;
+
   @Override
   public Promise<Object> onResolved (T value)
   {
@@ -32,8 +34,8 @@ class AwaitHandler <T>
   /**
    * The promise is settled.
    *
-   * @param value
-   * @param reason
+   * @param value           The settled value
+   * @param reason          The reason for rejection
    */
   private void settle (T value, Throwable reason)
   {
@@ -41,6 +43,9 @@ class AwaitHandler <T>
 
     try
     {
+      // Mark the handler as settled.
+      this.settled_ = true;
+
       this.value_ = value;
       this.reason_ = reason;
 
@@ -65,12 +70,16 @@ class AwaitHandler <T>
 
     try
     {
-      // Check if the promise has been settled before locking.
-      if (this.value_ != null)
-        return this.value_;
+      // Check if the promise has been settled before locking. If the promise has
+      // be settled, then we can just return and not wait.
 
-      if (this.reason_ != null)
-        throw this.reason_;
+      if (this.settled_)
+      {
+        if (this.reason_ != null)
+          throw this.reason_;
+
+        return this.value_;
+      }
 
       this.await (this.isSettled_);
 
