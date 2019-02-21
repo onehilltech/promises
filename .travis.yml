@@ -37,6 +37,9 @@ jdk:
 os:
   - linux
 
+before_install:
+  - yes | sdkmanager "build-tools;27.0.3"
+
 before_script:
   - pip install --user codecov
 
