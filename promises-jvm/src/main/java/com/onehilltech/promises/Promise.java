@@ -519,9 +519,24 @@ public class Promise <T>
   public <U> Promise <U> _catch (OnRejectedExecutor onRejected)
   {
     if (onRejected == null)
-      throw new IllegalStateException ("The rejected handler cannot be null.");
+      throw new IllegalArgumentException ("The rejected handler cannot be null.");
 
     return this.then (null, onRejected);
+  }
+
+  /**
+   * Add a finally handler to the chain.
+   *
+   * @param onFinally
+   * @param <U>
+   * @return
+   */
+  public <U> Promise <U> _finally (OnFinally onFinally)
+  {
+    if (onFinally == null)
+      throw new IllegalArgumentException ("The finally handler cannot be null.");
+
+
   }
 
   /**
@@ -531,7 +546,7 @@ public class Promise <T>
    * @param onRejected          Handler called when execute.
    */
   @SuppressWarnings ("unchecked")
-  public <U> Promise <U> then (OnResolvedExecutor <T, U> onResolved, OnRejectedExecutor <U> onRejected)
+  public <U> Promise <U> then (OnResolvedExecutor <T, U> onResolved, OnRejectedExecutor <U> onRejected, OnFinallyExecutor <T, U> onFinally)
   {
     ContinuationPromise <U> continuation = this.createContinuationPromise ();
 
