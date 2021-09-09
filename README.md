@@ -26,7 +26,7 @@ repositories {
     maven { url "https://jitpack.io" 
       // https://docs.gradle.org/current/userguide/declaring_repositories.html#sec:repository-content-filtering
       content {
-          // filter only artifacts with group "io.emeraldpay.polkaj"
+          // filter only artifacts with group "com.onehilltech.promises" for https://github.com/onehilltech/promises
           includeGroup "com.onehilltech.promises"
       }
     }
